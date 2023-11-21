@@ -7,7 +7,7 @@
  *                                   Server
  */
 
-#include "iot-sensor.h"
+#include "iot-helper.h"
 
 #include "ns3/applications-module.h"
 #include "ns3/core-module.h"
@@ -135,16 +135,17 @@ main(int argc, char* argv[])
     serverApps.Stop(Seconds(10.0));
 
     // client
-    // IoTSensorHelper iotSensorHelper(p2pInterfaces.GetAddress(1), 9);
+    IoTSensorHelper iotSensorHelper(p2pInterfaces.GetAddress(1), 9);
+    ApplicationContainer sensorApp = iotSensorHelper.Install(wifiStaNodes.Get(0));
+    sensorApp.Start(Seconds(2.0));
+    sensorApp.Stop(Seconds(10.0));
 
-    UdpEchoClientHelper echoClient(p2pInterfaces.GetAddress(1), 9);
-    echoClient.SetAttribute("MaxPackets", UintegerValue(1));
-    echoClient.SetAttribute("Interval", TimeValue(Seconds(1.0)));
-    echoClient.SetAttribute("PacketSize", UintegerValue(1024));
+    // UdpEchoClientHelper echoClient(p2pInterfaces.GetAddress(1), 9);
+    // echoClient.SetAttribute("MaxPackets", UintegerValue(1));
+    // echoClient.SetAttribute("Interval", TimeValue(Seconds(1.0)));
+    // echoClient.SetAttribute("PacketSize", UintegerValue(1024));
 
-    ApplicationContainer clientApp = echoClient.Install(wifiStaNodes.Get(0));
-    clientApp.Start(Seconds(2.0));
-    clientApp.Stop(Seconds(10.0));
+    // ApplicationContainer clientApp = echoClient.Install(wifiStaNodes.Get(0));
 
     Ipv4GlobalRoutingHelper::PopulateRoutingTables();
 
