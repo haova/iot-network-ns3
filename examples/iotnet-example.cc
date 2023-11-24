@@ -7,12 +7,11 @@
  *                                   Server
  */
 
-#include "iot-helper.h"
-
 #include "ns3/applications-module.h"
 #include "ns3/core-module.h"
 #include "ns3/csma-module.h"
 #include "ns3/internet-module.h"
+#include "ns3/iotnet-helper.h"
 #include "ns3/mobility-module.h"
 #include "ns3/netanim-module.h"
 #include "ns3/network-module.h"
@@ -135,10 +134,10 @@ main(int argc, char* argv[])
     serverApps.Stop(Seconds(10.0));
 
     // client
-    IoTSensorHelper iotSensorHelper(p2pInterfaces.GetAddress(1), 9);
-    ApplicationContainer sensorApp = iotSensorHelper.Install(wifiStaNodes.Get(0));
-    sensorApp.Start(Seconds(2.0));
-    sensorApp.Stop(Seconds(10.0));
+    // IoTSensorHelper iotSensorHelper(p2pInterfaces.GetAddress(1), 9);
+    // ApplicationContainer sensorApp = iotSensorHelper.Install(wifiStaNodes.Get(0));
+    // sensorApp.Start(Seconds(2.0));
+    // sensorApp.Stop(Seconds(10.0));
 
     // UdpEchoClientHelper echoClient(p2pInterfaces.GetAddress(1), 9);
     // echoClient.SetAttribute("MaxPackets", UintegerValue(1));
@@ -154,11 +153,11 @@ main(int argc, char* argv[])
                     MakeCallback(&RssiCallback));
 
     // net animation
-    AnimationInterface anim("net.xml");
-    anim.EnablePacketMetadata();
-    anim.UpdateNodeDescription(p2pNodes.Get(0), "AP (n0)");
-    anim.UpdateNodeDescription(p2pNodes.Get(1), "Server (n1)");
-    anim.UpdateNodeDescription(wifiStaNodes.Get(0), "Sensor 1 (n2)");
+    // AnimationInterface anim("wireless-animation.xml");
+    // anim.EnablePacketMetadata();
+    // anim.UpdateNodeDescription(p2pNodes.Get(0), "AP (n0)");
+    // anim.UpdateNodeDescription(p2pNodes.Get(1), "Server (n1)");
+    // anim.UpdateNodeDescription(wifiStaNodes.Get(0), "Sensor 1 (n2)");
 
     // pcap tracing
     phy.SetPcapDataLinkType(WifiPhyHelper::DLT_IEEE802_11_RADIO);

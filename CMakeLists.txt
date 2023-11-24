@@ -1,15 +1,25 @@
-include_directories(./include) # CXXFLAGS -I counterpart
-link_directories(./lib) # LINKFLAGS -L counterpart
-link_libraries(cpr) # LINKFLAGS -l or LIB counterpart
+check_include_file_cxx(stdint.h HAVE_STDINT_H)
+if(HAVE_STDINT_H)
+    add_definitions(-DHAVE_STDINT_H)
+endif()
 
-# Target definition after changing settings
-build_exec(
-  EXECNAME main
-  SOURCE_FILES main.cc
-               server-app.cc
-  HEADER_FILES server-app.h
-  LIBRARIES_TO_LINK ${ns3-libs}
-                    curl
-                    cpr
-  EXECUTABLE_DIRECTORY_PATH ${CMAKE_OUTPUT_DIRECTORY}/scratch/ns3-kit
+set(examples_as_tests_sources)
+if(${ENABLE_EXAMPLES})
+    set(examples_as_tests_sources
+        #test/iotnet-examples-test-suite.cc
+        )
+endif()
+
+build_lib(
+    LIBNAME iotnet
+    SOURCE_FILES model/iotnet.cc
+                 model/iotnet-sensor.cc
+                 helper/iotnet-helper.cc
+    HEADER_FILES model/iotnet.h
+                 model/iotnet-sensor.h
+                 helper/iotnet-helper.h
+    LIBRARIES_TO_LINK ${libcore}
+    TEST_SOURCES test/iotnet-test-suite.cc
+                 ${examples_as_tests_sources}
 )
+

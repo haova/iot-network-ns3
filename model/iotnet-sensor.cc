@@ -1,44 +1,46 @@
-#include "iot-sensor.h"
+#include "iotnet-sensor.h"
+
+#include <iostream>
 
 namespace ns3
 {
 
-IoTSensor::IoTSensor()
+IoTNetSensor::IoTNetSensor()
 {
 }
 
-IoTSensor::~IoTSensor()
+IoTNetSensor::~IoTNetSensor()
 {
 }
 
 TypeId
-IoTSensor::GetTypeId()
+IoTNetSensor::GetTypeId()
 {
-    static TypeId tid = TypeId("IoTSensor")
+    static TypeId tid = TypeId("IoTNetSensor")
                             .SetParent<Application>()
-                            .SetGroupName("IoT")
-                            .AddConstructor<IoTSensor>()
+                            .SetGroupName("IoTNet")
+                            .AddConstructor<IoTNetSensor>()
                             .AddAttribute("RemoteAddress",
                                           "The destination Address of the outbound packets",
                                           AddressValue(),
-                                          MakeAddressAccessor(&IoTSensor::m_peerAddress),
+                                          MakeAddressAccessor(&IoTNetSensor::m_peerAddress),
                                           MakeAddressChecker())
                             .AddAttribute("RemotePort",
                                           "The destination port of the outbound packets",
                                           UintegerValue(0),
-                                          MakeUintegerAccessor(&IoTSensor::m_peerPort),
+                                          MakeUintegerAccessor(&IoTNetSensor::m_peerPort),
                                           MakeUintegerChecker<uint16_t>());
     return tid;
 }
 
 void
-IoTSensor::StartApplication()
+IoTNetSensor::StartApplication()
 {
     std::cout << "Start sensor app" << std::endl;
 }
 
 void
-IoTSensor::StopApplication()
+IoTNetSensor::StopApplication()
 {
     std::cout << "Stop sensor app" << std::endl;
 }
