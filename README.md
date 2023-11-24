@@ -6,12 +6,12 @@ Simulate Jamming in IoT Network using NS3.
 
 - Course: NT2203.CH1702
 - Members:
-  - 220202014 - Vũ Anh Hào | [@haova](https://github.com/haova/).
-  - ...
-  - ...
-  - ...
+  - 220202014 - Vũ Anh Hào
+  - 230202006 - Ngô Thái Hưng
+  - 220202020 - Nguyễn Duy Minh Nhật
+  - 230202009 - Nguyễn Tấn Kiệt
 
-## Install
+## Installation
 
 Extract `ns-allinone-3.40.tar.bz2`.
 
