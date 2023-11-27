@@ -10,15 +10,21 @@ if(${ENABLE_EXAMPLES})
         )
 endif()
 
+find_package(cpr REQUIRED)
+link_libraries(cpr::cpr)
+
 build_lib(
     LIBNAME iotnet
     SOURCE_FILES model/iotnet.cc
                  model/iotnet-sensor.cc
+                 model/iotnet-server.cc
                  helper/iotnet-helper.cc
     HEADER_FILES model/iotnet.h
                  model/iotnet-sensor.h
+                 model/iotnet-server.h
                  helper/iotnet-helper.h
     LIBRARIES_TO_LINK ${libcore}
+                      cpr
     TEST_SOURCES test/iotnet-test-suite.cc
                  ${examples_as_tests_sources}
 )

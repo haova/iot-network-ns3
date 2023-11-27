@@ -1,3 +1,6 @@
+#ifndef IOTNET_SERVER_H
+#define IOTNET_SERVER_H
+
 #include "ns3/application.h"
 #include "ns3/core-module.h"
 #include "ns3/network-module.h"
@@ -6,9 +9,9 @@
 using namespace ns3;
 
 /**
- * ServerApp application.
+ * IotNetServer application.
  */
-class ServerApp : public Application
+class IotNetServer : public Application
 {
   public:
     /**
@@ -17,8 +20,8 @@ class ServerApp : public Application
      */
     static TypeId GetTypeId();
 
-    ServerApp();
-    ~ServerApp() override;
+    IotNetServer();
+    ~IotNetServer() override;
 
     /**
      * Set the counter calculator for received packets.
@@ -51,3 +54,5 @@ class ServerApp : public Application
     Ptr<CounterCalculator<>> m_calc;           //!< Counter of the number of received packets
     Ptr<TimeMinMaxAvgTotalCalculator> m_delay; //!< Delay calculator
 };
+
+#endif /* IOTNET_SERVER_H */

@@ -8,7 +8,7 @@ RUN python3 -m pip install --user cppyy
 RUN apt install -y gir1.2-goocanvas-2.0 python3-gi python3-gi-cairo python3-pygraphviz gir1.2-gtk-3.0 ipython3  
 RUN apt install -y python3-setuptools git
 RUN apt install -y qtbase5-dev qtchooser qt5-qmake qtbase5-dev-tools
-RUN apt install -y gir1.2-goocanvas-2.0 python3-gi python3-gi-cairo python3-pygraphviz gir1.2-gtk-3.0 ipython3 
+RUN apt install -y python3-gi-cairo
 RUN apt install -y openmpi-bin openmpi-common openmpi-doc libopenmpi-dev
 RUN apt install -y mercurial unzip
 RUN apt install -y gdb valgrind 
@@ -24,6 +24,7 @@ RUN apt install -y libgtk-3-dev
 RUN apt install -y vtun lxc uml-utilities
 RUN apt install -y libboost-all-dev
 RUN apt install -y wget
+RUN apt install -y libssl-dev
 
 WORKDIR /root
 RUN wget https://www.nsnam.org/releases/ns-allinone-3.40.tar.bz2
@@ -32,5 +33,20 @@ RUN tar -xvjf ns-allinone-3.40.tar.bz2
 WORKDIR /root/ns-allinone-3.40/ns-3.40
 RUN ./ns3 configure --enable-examples --enable-tests --enable-python-bindings
 RUN ./ns3 build
+
+WORKDIR /root
+RUN wget https://github.com/libcpr/cpr/archive/refs/tags/1.10.5.tar.gz
+RUN tar -xvzf 1.10.5.tar.gz
+
+RUN apt install -y curl libssl-dev libcurl4-openssl-dev
+
+WORKDIR /root/cpr-1.10.5
+RUN mkdir build
+WORKDIR /root/cpr-1.10.5/build
+RUN cmake .. -DCPR_USE_SYSTEM_CURL=ON
+RUN cmake --build . --parallel
+RUN cmake --install .
+
+WORKDIR /root/ns-allinone-3.40/ns-3.40
 
 ENTRYPOINT ["tail", "-f", "/dev/null"]

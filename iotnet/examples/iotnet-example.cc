@@ -135,6 +135,8 @@ main(int argc, char* argv[])
     serverApps.Start(Seconds(1.0));
     serverApps.Stop(Seconds(10.0));
 
+    // IotNetServer iotNetServer;
+
     // client
     // IoTSensorHelper iotSensorHelper(p2pInterfaces.GetAddress(1), 9);
     // ApplicationContainer sensorApp = iotSensorHelper.Install(wifiStaNodes.Get(0));
@@ -155,11 +157,11 @@ main(int argc, char* argv[])
                     MakeCallback(&RssiCallback));
 
     // net animation
-    // AnimationInterface anim("wireless-animation.xml");
-    // anim.EnablePacketMetadata();
-    // anim.UpdateNodeDescription(p2pNodes.Get(0), "AP (n0)");
-    // anim.UpdateNodeDescription(p2pNodes.Get(1), "Server (n1)");
-    // anim.UpdateNodeDescription(wifiStaNodes.Get(0), "Sensor 1 (n2)");
+    AnimationInterface anim("wireless-animation.xml");
+    anim.EnablePacketMetadata();
+    anim.UpdateNodeDescription(p2pNodes.Get(0), "AP (n0)");
+    anim.UpdateNodeDescription(p2pNodes.Get(1), "Server (n1)");
+    anim.UpdateNodeDescription(wifiStaNodes.Get(0), "Sensor 1 (n2)");
 
     // pcap tracing
     phy.SetPcapDataLinkType(WifiPhyHelper::DLT_IEEE802_11_RADIO);
@@ -167,7 +169,7 @@ main(int argc, char* argv[])
     phy.EnablePcap("net", apDevices.Get(0));
 
     // run simulation
-    Simulator::Stop(Seconds(60.0));
+    Simulator::Stop(Seconds(5.0));
     Simulator::Run();
     Simulator::Destroy();
 

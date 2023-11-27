@@ -2,6 +2,7 @@
 #define IOTNET_HELPER_H
 
 #include "ns3/iotnet-sensor.h"
+#include "ns3/iotnet-server.h"
 #include "ns3/iotnet.h"
 
 namespace ns3

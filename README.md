@@ -42,5 +42,6 @@ Next, run commands to build modules.
 Now, you can run an example with `iotnet` module.
 
 ```bash
-./ns3 run contrib/iotnet/examples/iotnet-example
+ln -s ../contrib/iotnet/examples/iotnet-example.cc scratch/iotnet-example.cc
+./ns3 run scratch/iotnet-example
 ```
