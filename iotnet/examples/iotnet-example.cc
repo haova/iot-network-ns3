@@ -43,6 +43,8 @@ main(int argc, char* argv[])
     CommandLine cmd(__FILE__);
     cmd.Parse(argc, argv);
 
+    GlobalValue::Bind("SimulatorImplementationType", StringValue("ns3::RealtimeSimulatorImpl"));
+
     // create p2p nodes (n0, n1)
     NodeContainer p2pNodes;
     p2pNodes.Create(2);
@@ -165,7 +167,7 @@ main(int argc, char* argv[])
     phy.EnablePcap("net", apDevices.Get(0));
 
     // run simulation
-    Simulator::Stop(Seconds(10.0));
+    Simulator::Stop(Seconds(60.0));
     Simulator::Run();
     Simulator::Destroy();
 

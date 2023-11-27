@@ -11,17 +11,26 @@ Simulate Jamming in IoT Network using NS3.
   - 220202020 - Nguyễn Duy Minh Nhật
   - 230202009 - Nguyễn Tấn Kiệt
 
-## Installation
+## Prerequisites
 
-Extract `ns-allinone-3.40.tar.bz2`.
+- Docker CE
+- Docker Compose
 
-Then, clone this repository:
+## Setup
 
 ```bash
-cd ns-allinone-3.40/ns-3.40/contrib
-git clone git@github.com:haova/iot-network-ns3.git iotnet
-cd ../
+sudo docker compose up
 ```
+
+```bash
+sudo docker exec -it iotnet-ns3 /bin/bash
+```
+
+```bash
+./ns3 run examples/tutorial/second
+```
+
+## Simulation
 
 Next, run commands to build modules.
 
