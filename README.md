@@ -22,26 +22,15 @@ Simulate Jamming in IoT Network using NS3.
 sudo docker compose up
 ```
 
+Access docker container.
+
 ```bash
 sudo docker exec -it iotnet-ns3 /bin/bash
+sudo docker exec -it server-node /bin/bash
 ```
 
 ```bash
 ./ns3 run examples/tutorial/second
-```
-
-## Simulation
-
-Next, run commands to build modules.
-
-```bash
-./ns3 configure --enable-examples --enable-tests --enable-python-bindings
-./ns3 build
-```
-
-Now, you can run an example with `iotnet` module.
-
-```bash
-ln -s ../contrib/iotnet/examples/iotnet-example.cc scratch/iotnet-example.cc
-./ns3 run scratch/iotnet-example
+./ns3 run scratch/iotnet/main
+./ns3 run scratch/iotnet/p2p
 ```

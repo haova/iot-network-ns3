@@ -1,6 +1,21 @@
 services:
-  ns3:
+  iotnet-ns3:
     container_name: iotnet-ns3
-    build: ./dockers/ns3
+    build: ./ns3
     volumes:
-    - ./iotnet:/root/ns-allinone-3.40/ns-3.40/contrib/iotnet/
+      - ./ns3/iotnet:/root/ns-allinone-3.40/ns-3.40/contrib/iotnet
+      - ./ns3/output:/root/ns-allinone-3.40/ns-3.40/output
+    links:
+      - server-node
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+  server-node:
+    container_name: server-node
+    build: ./node
+    volumes:
+      - ./node/server:/root/app

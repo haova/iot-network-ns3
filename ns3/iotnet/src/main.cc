@@ -31,8 +31,8 @@ RssiCallback(std::string context,
              WifiMode mode,
              WifiPreamble preamble)
 {
-    double rssi = 10 * std::log10(snr);
-    std::cout << "Received packet with RSSI: " << rssi << " dBm" << std::endl;
+    // double rssi = 10 * std::log10(snr);
+    // std::cout << "Received packet with RSSI: " << rssi << " dBm" << std::endl;
 }
 
 int
@@ -43,7 +43,8 @@ main(int argc, char* argv[])
     CommandLine cmd(__FILE__);
     cmd.Parse(argc, argv);
 
-    GlobalValue::Bind("SimulatorImplementationType", StringValue("ns3::RealtimeSimulatorImpl"));
+    // realtime
+    // GlobalValue::Bind("SimulatorImplementationType", StringValue("ns3::RealtimeSimulatorImpl"));
 
     // create p2p nodes (n0, n1)
     NodeContainer p2pNodes;
@@ -130,18 +131,26 @@ main(int argc, char* argv[])
     address.Assign(apDevices);
 
     // server app
-    UdpEchoServerHelper echoServer(9);
-    ApplicationContainer serverApps = echoServer.Install(serverNode.Get(0));
-    serverApps.Start(Seconds(1.0));
-    serverApps.Stop(Seconds(10.0));
+    uint16_t sinkPort = 8080;
+    Address sinkAddress(InetSocketAddress(p2pInterfaces.GetAddress(1), sinkPort));
+    PacketSinkHelper packetSinkHelper("ns3::TcpSocketFactory",
+                                      InetSocketAddress(Ipv4Address::GetAny(), sinkPort));
+    ApplicationContainer sinkApps = packetSinkHelper.Install(serverNode.Get(0));
+    sinkApps.Start(Seconds(0.));
+    sinkApps.Stop(Seconds(10.));
+
+    // UdpEchoServerHelper echoServer(9);
+    // ApplicationContainer serverApps = echoServer.Install(serverNode.Get(0));
+    // serverApps.Start(Seconds(1.0));
+    // serverApps.Stop(Seconds(10.0));
 
     // IotNetServer iotNetServer;
 
     // client
-    // IoTSensorHelper iotSensorHelper(p2pInterfaces.GetAddress(1), 9);
-    // ApplicationContainer sensorApp = iotSensorHelper.Install(wifiStaNodes.Get(0));
-    // sensorApp.Start(Seconds(2.0));
-    // sensorApp.Stop(Seconds(10.0));
+    IoTNetSensorHelper iotNetSensorHelper(sinkAddress, 9);
+    ApplicationContainer sensorApp = iotNetSensorHelper.Install(wifiStaNodes.Get(0));
+    sensorApp.Start(Seconds(2.0));
+    sensorApp.Stop(Seconds(4.0));
 
     // UdpEchoClientHelper echoClient(p2pInterfaces.GetAddress(1), 9);
     // echoClient.SetAttribute("MaxPackets", UintegerValue(1));
@@ -157,7 +166,7 @@ main(int argc, char* argv[])
                     MakeCallback(&RssiCallback));
 
     // net animation
-    AnimationInterface anim("wireless-animation.xml");
+    AnimationInterface anim("output/wireless-animation.xml");
     anim.EnablePacketMetadata();
     anim.UpdateNodeDescription(p2pNodes.Get(0), "AP (n0)");
     anim.UpdateNodeDescription(p2pNodes.Get(1), "Server (n1)");
@@ -165,11 +174,11 @@ main(int argc, char* argv[])
 
     // pcap tracing
     phy.SetPcapDataLinkType(WifiPhyHelper::DLT_IEEE802_11_RADIO);
-    pointToPoint.EnablePcapAll("net");
-    phy.EnablePcap("net", apDevices.Get(0));
+    pointToPoint.EnablePcapAll("output/iotnet");
+    phy.EnablePcap("output/iotnet", apDevices.Get(0));
 
     // run simulation
-    Simulator::Stop(Seconds(5.0));
+    Simulator::Stop(Seconds(10.0));
     Simulator::Run();
     Simulator::Destroy();
 
