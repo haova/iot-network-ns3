@@ -1,0 +1,29 @@
+{
+  "private": true,
+  "scripts": {
+    "dev": "node server.js",
+    "build": "next build",
+    "start": "next start",
+    "format": "prettier --write \"./{components,lib,pages,public,styles}/**/*.{ts,tsx,js,json,html,css}\""
+  },
+  "dependencies": {
+    "antd": "^5.11.5",
+    "next": "latest",
+    "next-sitemap": "^3.1.32",
+    "pouchdb": "^8.0.1",
+    "prettier": "^2.8.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-fast-marquee": "^1.6.2",
+    "socket.io": "^4.7.2",
+    "socket.io-client": "^4.7.2",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@types/node": "18.7.5",
+    "@types/pouchdb": "^6.4.2",
+    "@types/react": "16.9.17",
+    "@types/ws": "^8.5.10",
+    "typescript": "^5.3.2"
+  }
+}
