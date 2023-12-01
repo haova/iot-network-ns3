@@ -15,7 +15,20 @@ namespace ns3
 class IoTNetSensorHelper
 {
   public:
-    IoTNetSensorHelper(Address ip, uint16_t port);
+    IoTNetSensorHelper(Address address);
+    void SetAttribute(std::string name, const AttributeValue& value);
+    ApplicationContainer Install(Ptr<Node> node) const;
+
+  private:
+    Ptr<Application> InstallPriv(Ptr<Node> node) const;
+    
+    ObjectFactory m_factory;
+};
+
+class IoTNetServerHelper
+{
+  public:
+    IoTNetServerHelper(Address address);
     void SetAttribute(std::string name, const AttributeValue& value);
     ApplicationContainer Install(Ptr<Node> node) const;
 

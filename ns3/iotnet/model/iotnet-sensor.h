@@ -31,8 +31,7 @@ class IoTNetSensor : public Application
     void StartApplication() override;
     void StopApplication() override;
 
-    Address m_peerAddress; //!< Remote peer address
-    uint16_t m_peerPort;   //!< Remote peer port
+    Address m_peerAddress;
     Ptr<Socket> m_socket;
 };
 

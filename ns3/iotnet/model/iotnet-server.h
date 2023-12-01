@@ -24,10 +24,14 @@ class IoTNetServer : public Application
     ~IoTNetServer() override;
 
     static TypeId GetTypeId();
+    void SetSocket(Ptr<Socket> socket);
 
   private:
     void StartApplication() override;
     void StopApplication() override;
+
+    Address m_address;
+    Ptr<Socket> m_socket;
 };
 
 } // namespace ns3

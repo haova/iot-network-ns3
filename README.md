@@ -32,5 +32,18 @@ sudo docker exec -it server-node /bin/bash
 ```bash
 ./ns3 run examples/tutorial/second
 ./ns3 run scratch/iotnet/main
-./ns3 run scratch/iotnet/p2p
 ```
+
+## Tshark
+
+```bash
+tshark -r output/iotnet-0-0.pcap
+tshark -q -r output/iotnet-0-0.pcap -z follow,tcp,ascii,0
+```
+
+## Checklist
+
+- [x] Sensor node can send a TCP packet.
+- [x] Server node can received a TCP packet.
+- [ ] Sensor node can read rssi, snr.
+- [ ] Server node can forward packet to outside.

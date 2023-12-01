@@ -24,12 +24,7 @@ IoTNetSensor::GetTypeId()
                                           "The destination Address of the outbound packets",
                                           AddressValue(),
                                           MakeAddressAccessor(&IoTNetSensor::m_peerAddress),
-                                          MakeAddressChecker())
-                            .AddAttribute("RemotePort",
-                                          "The destination port of the outbound packets",
-                                          UintegerValue(0),
-                                          MakeUintegerAccessor(&IoTNetSensor::m_peerPort),
-                                          MakeUintegerChecker<uint16_t>());
+                                          MakeAddressChecker());
     return tid;
 }
 

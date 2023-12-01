@@ -35,32 +35,17 @@ RssiCallback(std::string context,
     // std::cout << "Received packet with RSSI: " << rssi << " dBm" << std::endl;
 }
 
-int
-main(int argc, char* argv[])
+NodeContainer
+createSensorNodes(int n)
 {
-    NS_LOG_UNCOND("IoT Network Simulator");
+    NodeContainer container;
+    container.Create(n);
+    return container;
+}
 
-    CommandLine cmd(__FILE__);
-    cmd.Parse(argc, argv);
-
-    // realtime
-    // GlobalValue::Bind("SimulatorImplementationType", StringValue("ns3::RealtimeSimulatorImpl"));
-
-    // create p2p nodes (n0, n1)
-    NodeContainer p2pNodes;
-    p2pNodes.Create(2);
-
-    // create wifi sensor nodes (n2)
-    NodeContainer wifiStaNodes;
-    wifiStaNodes.Create(1);
-
-    // get AP node (n0)
-    NodeContainer wifiApNode = p2pNodes.Get(0);
-
-    // get server node (n1)
-    NodeContainer serverNode;
-    serverNode.Add(p2pNodes.Get(1));
-
+NetDeviceContainer
+setupWifi(NodeContainer sensorNodes, NodeContainer apNode)
+{
     // wifi phy and mac
     YansWifiChannelHelper channel = YansWifiChannelHelper::Default();
     YansWifiPhyHelper phy;
@@ -71,22 +56,14 @@ main(int argc, char* argv[])
 
     WifiHelper wifi;
 
-    // p2p devices
-    PointToPointHelper pointToPoint;
-    pointToPoint.SetDeviceAttribute("DataRate", StringValue("5Mbps"));
-    pointToPoint.SetChannelAttribute("Delay", StringValue("2ms"));
-
-    NetDeviceContainer p2pDevices;
-    p2pDevices = pointToPoint.Install(p2pNodes);
-
     // wireless devices
     NetDeviceContainer staDevices;
     mac.SetType("ns3::StaWifiMac", "Ssid", SsidValue(ssid), "ActiveProbing", BooleanValue(false));
-    staDevices = wifi.Install(phy, mac, wifiStaNodes);
+    staDevices = wifi.Install(phy, mac, sensorNodes);
 
     NetDeviceContainer apDevices;
     mac.SetType("ns3::ApWifiMac", "Ssid", SsidValue(ssid));
-    apDevices = wifi.Install(phy, mac, wifiApNode);
+    apDevices = wifi.Install(phy, mac, apNode);
 
     // mobility
     MobilityHelper mobility;
@@ -108,10 +85,57 @@ main(int argc, char* argv[])
     mobility.SetMobilityModel("ns3::RandomWalk2dMobilityModel",
                               "Bounds",
                               RectangleValue(Rectangle(-50, 50, -50, 50)));
-    mobility.Install(wifiStaNodes);
+    mobility.Install(sensorNodes);
 
     mobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
-    mobility.Install(wifiApNode);
+    mobility.Install(apNode);
+
+    // pcap
+    phy.SetPcapDataLinkType(WifiPhyHelper::DLT_IEEE802_11_RADIO);
+    phy.EnablePcap("output/iotnet", apDevices.Get(0));
+
+    // return
+    NetDeviceContainer deviceContainer;
+    deviceContainer.Add(apDevices);
+    deviceContainer.Add(staDevices);
+    return deviceContainer;
+}
+
+int
+main(int argc, char* argv[])
+{
+    NS_LOG_UNCOND("IoT Network Simulator");
+
+    CommandLine cmd(__FILE__);
+    cmd.Parse(argc, argv);
+
+    // realtime
+    // GlobalValue::Bind("SimulatorImplementationType", StringValue("ns3::RealtimeSimulatorImpl"));
+
+    // create p2p nodes (n0, n1)
+    NodeContainer p2pNodes;
+    p2pNodes.Create(2);
+
+    // create wifi sensor nodes (n2)
+    NodeContainer wifiStaNodes = createSensorNodes(1);
+
+    // get AP node (n0)
+    NodeContainer wifiApNode = p2pNodes.Get(0);
+
+    // get server node (n1)
+    NodeContainer serverNode;
+    serverNode.Add(p2pNodes.Get(1));
+
+    // p2p devices
+    PointToPointHelper pointToPoint;
+    pointToPoint.SetDeviceAttribute("DataRate", StringValue("5Mbps"));
+    pointToPoint.SetChannelAttribute("Delay", StringValue("2ms"));
+
+    NetDeviceContainer p2pDevices;
+    p2pDevices = pointToPoint.Install(p2pNodes);
+
+    // wifi
+    NetDeviceContainer wifiDevices = setupWifi(wifiStaNodes, wifiApNode);
 
     // internet ipv4 stack
     InternetStackHelper stack;
@@ -122,61 +146,37 @@ main(int argc, char* argv[])
     // assign ip addresses
     Ipv4AddressHelper address;
 
-    address.SetBase("10.1.1.0", "255.255.255.0");
+    address.SetBase("10.1.2.0", "255.255.255.0");
     Ipv4InterfaceContainer p2pInterfaces;
     p2pInterfaces = address.Assign(p2pDevices);
 
-    address.SetBase("10.1.3.0", "255.255.255.0");
-    address.Assign(staDevices);
-    address.Assign(apDevices);
+    address.SetBase("10.1.1.0", "255.255.255.0");
+    address.Assign(wifiDevices);
 
     // server app
     uint16_t sinkPort = 8080;
     Address sinkAddress(InetSocketAddress(p2pInterfaces.GetAddress(1), sinkPort));
-    PacketSinkHelper packetSinkHelper("ns3::TcpSocketFactory",
-                                      InetSocketAddress(Ipv4Address::GetAny(), sinkPort));
-    ApplicationContainer sinkApps = packetSinkHelper.Install(serverNode.Get(0));
+
+    IoTNetServerHelper iotNetServerHelper(sinkAddress);
+    ApplicationContainer sinkApps = iotNetServerHelper.Install(serverNode.Get(0));
     sinkApps.Start(Seconds(0.));
     sinkApps.Stop(Seconds(10.));
 
-    // UdpEchoServerHelper echoServer(9);
-    // ApplicationContainer serverApps = echoServer.Install(serverNode.Get(0));
-    // serverApps.Start(Seconds(1.0));
-    // serverApps.Stop(Seconds(10.0));
-
-    // IotNetServer iotNetServer;
-
     // client
-    IoTNetSensorHelper iotNetSensorHelper(sinkAddress, 9);
+    IoTNetSensorHelper iotNetSensorHelper(sinkAddress);
     ApplicationContainer sensorApp = iotNetSensorHelper.Install(wifiStaNodes.Get(0));
     sensorApp.Start(Seconds(2.0));
     sensorApp.Stop(Seconds(4.0));
 
-    // UdpEchoClientHelper echoClient(p2pInterfaces.GetAddress(1), 9);
-    // echoClient.SetAttribute("MaxPackets", UintegerValue(1));
-    // echoClient.SetAttribute("Interval", TimeValue(Seconds(1.0)));
-    // echoClient.SetAttribute("PacketSize", UintegerValue(1024));
-
-    // ApplicationContainer clientApp = echoClient.Install(wifiStaNodes.Get(0));
-
     Ipv4GlobalRoutingHelper::PopulateRoutingTables();
-
-    // tracing
-    Config::Connect("/NodeList/*/DeviceList/*/$ns3::WifiNetDevice/Phy/$ns3::WifiPhy/State/RxOk",
-                    MakeCallback(&RssiCallback));
 
     // net animation
     AnimationInterface anim("output/wireless-animation.xml");
     anim.EnablePacketMetadata();
-    anim.UpdateNodeDescription(p2pNodes.Get(0), "AP (n0)");
-    anim.UpdateNodeDescription(p2pNodes.Get(1), "Server (n1)");
-    anim.UpdateNodeDescription(wifiStaNodes.Get(0), "Sensor 1 (n2)");
 
     // pcap tracing
-    phy.SetPcapDataLinkType(WifiPhyHelper::DLT_IEEE802_11_RADIO);
     pointToPoint.EnablePcapAll("output/iotnet");
-    phy.EnablePcap("output/iotnet", apDevices.Get(0));
-
+    
     // run simulation
     Simulator::Stop(Seconds(10.0));
     Simulator::Run();
