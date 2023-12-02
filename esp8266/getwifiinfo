@@ -1,0 +1,83 @@
+#include <ESP8266WiFi.h>
+#include <ESP8266HTTPClient.h>
+
+const char *ssid = ""; //your ssid
+const char *password = ""; //your password ssid
+const char *serverUrl = "http://123.30.105.197:1514"; 
+
+WiFiClient client;
+
+String getEncryptionType(uint8_t encryptionType) {
+  switch (encryptionType) {
+    case ENC_TYPE_WEP:
+      return "WEP";
+    case ENC_TYPE_TKIP:
+      return "WPA";
+    case ENC_TYPE_CCMP:
+      return "WPA2";
+    case ENC_TYPE_NONE:
+      return "Open";
+    default:
+      return "Unknown";
+  }
+}
+
+void setup() {
+  Serial.begin(115200);
+
+  // Connect to WiFi
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(1000);
+    Serial.println("Connecting to WiFi...");
+  }
+
+  Serial.println("Connected to WiFi");
+}
+
+void loop() {
+  // Retrieve WiFi information
+  String ssid = WiFi.SSID();
+  int32_t rssi = WiFi.RSSI();
+  int channel = WiFi.channel();
+  String bssid = WiFi.BSSIDstr();
+
+  // Get encryption type for the connected network
+  uint8_t encryptionType = WiFi.encryptionType(WiFi.scanNetworks()); // Scan for networks to get encryption type
+
+  // Convert encryption type to a human-readable string
+  String encryptionTypeString = getEncryptionType(encryptionType);
+
+  // Print WiFi information
+  Serial.println("WiFi Information:");
+  Serial.println("SSID: " + ssid);
+  Serial.println("Channel: " + String(channel));
+  Serial.println("Signal Strength (dBm): " + String(rssi));
+  Serial.println("MAC Address: " + bssid);
+  Serial.println("Encryption Type: " + encryptionTypeString);
+
+  // Make HTTP POST request
+  HTTPClient http;
+  http.begin(client, serverUrl); // Use the WiFiClient parameter
+
+
+  String postData = "rssi=" + String(rssi) +
+                    "&ssid=" + ssid +
+                    "&channel=" + String(channel) +
+                    "&mac=" + bssid +
+                    "&encryption=" + encryptionTypeString;
+
+  int httpResponseCode = http.POST(postData);
+
+  if (httpResponseCode > 0) {
+    Serial.print("HTTP POST Success, Response code: ");
+    Serial.println(httpResponseCode);
+  } else {
+    Serial.print("HTTP POST Failed, Error code: ");
+    Serial.println(httpResponseCode);
+  }
+
+  http.end(); // Close connection
+
+  delay(5000); // Delay for 5 seconds before printing WiFi info and making the next HTTP POST
+}
