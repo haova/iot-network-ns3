@@ -24,14 +24,31 @@ using namespace ns3;
 
 NS_LOG_COMPONENT_DEFINE("IoTNetworkSimulator");
 
-void
-RssiCallback(std::string context,
-             Ptr<const Packet> p,
-             double snr,
-             WifiMode mode,
-             WifiPreamble preamble)
+void RssiCallback(std::string context,
+                  Ptr<const Packet> packet,
+                  double snr,
+                  WifiMode mode,
+                  WifiPreamble preamble)
 {
-    // double rssi = 10 * std::log10(snr);
+    double rssi = 10 * std::log10(snr);
+
+    Ipv4Header ipv4Header;
+    packet->PeekHeader(ipv4Header);
+
+    Ipv4Address sourceIp = ipv4Header.GetSource();
+    NS_LOG_UNCOND("Source IP Address: " << sourceIp);
+
+    // Process the received data
+    uint8_t buffer[packet->GetSize()];
+    packet->CopyData(buffer, packet->GetSize());
+
+    // Assuming the payload is a string, you can convert it to a C++ string
+    std::string payload(reinterpret_cast<char *>(buffer), packet->GetSize());
+
+    NS_LOG_UNCOND("---");
+    NS_LOG_UNCOND("+ Received " << packet->GetSize() << " bytes. Payload: " << payload);
+    NS_LOG_UNCOND("---");
+
     // std::cout << "Received packet with RSSI: " << rssi << " dBm" << std::endl;
 }
 
@@ -101,8 +118,7 @@ setupWifi(NodeContainer sensorNodes, NodeContainer apNode)
     return deviceContainer;
 }
 
-int
-main(int argc, char* argv[])
+int main(int argc, char *argv[])
 {
     NS_LOG_UNCOND("IoT Network Simulator");
 
@@ -164,7 +180,7 @@ main(int argc, char* argv[])
 
     // client
     IoTNetSensorHelper iotNetSensorHelper(sinkAddress);
-    ApplicationContainer sensorApp = iotNetSensorHelper.Install(wifiStaNodes.Get(0));
+    ApplicationContainer sensorApp = iotNetSensorHelper.Install(wifiDevices.Get(1));
     sensorApp.Start(Seconds(2.0));
     sensorApp.Stop(Seconds(4.0));
 
@@ -176,7 +192,10 @@ main(int argc, char* argv[])
 
     // pcap tracing
     pointToPoint.EnablePcapAll("output/iotnet");
-    
+
+    // Config::Connect("/NodeList/*/DeviceList/*/$ns3::WifiNetDevice/Phy/$ns3::WifiPhy/State/RxOk",
+    //                 MakeCallback(&RssiCallback));
+
     // run simulation
     Simulator::Stop(Seconds(10.0));
     Simulator::Run();

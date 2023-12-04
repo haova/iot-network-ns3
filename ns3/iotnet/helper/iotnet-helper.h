@@ -12,31 +12,31 @@
 namespace ns3
 {
 
-class IoTNetSensorHelper
-{
+  class IoTNetSensorHelper
+  {
   public:
     IoTNetSensorHelper(Address address);
-    void SetAttribute(std::string name, const AttributeValue& value);
-    ApplicationContainer Install(Ptr<Node> node) const;
+    void SetAttribute(std::string name, const AttributeValue &value);
+    ApplicationContainer Install(Ptr<NetDevice> device) const;
 
   private:
-    Ptr<Application> InstallPriv(Ptr<Node> node) const;
-    
-    ObjectFactory m_factory;
-};
+    Ptr<Application> InstallPriv(Ptr<NetDevice> device) const;
 
-class IoTNetServerHelper
-{
+    ObjectFactory m_factory;
+  };
+
+  class IoTNetServerHelper
+  {
   public:
     IoTNetServerHelper(Address address);
-    void SetAttribute(std::string name, const AttributeValue& value);
+    void SetAttribute(std::string name, const AttributeValue &value);
     ApplicationContainer Install(Ptr<Node> node) const;
 
   private:
     Ptr<Application> InstallPriv(Ptr<Node> node) const;
-    
+
     ObjectFactory m_factory;
-};
+  };
 
 } // namespace ns3
 

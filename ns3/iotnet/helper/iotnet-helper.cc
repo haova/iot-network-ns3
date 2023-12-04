@@ -2,111 +2,130 @@
 
 #include "ns3/names.h"
 #include "ns3/uinteger.h"
+#include "ns3/wifi-module.h"
+#include "ns3/yans-wifi-helper.h"
 
 namespace ns3
 {
 
-// local
-static void
-CwndChange(uint32_t oldCwnd, uint32_t newCwnd)
-{
-    NS_LOG_UNCOND("Cwnd change at " << Simulator::Now().GetSeconds() << " with value " << newCwnd);
-}
+    // local
+    static void
+    CwndChange(uint32_t oldCwnd, uint32_t newCwnd)
+    {
+        NS_LOG_UNCOND("Cwnd change at " << Simulator::Now().GetSeconds() << " with value " << newCwnd);
+    }
 
-static void
-OnDataReceived(Ptr<Socket> socket) {
-  Ptr<Packet> packet;
-  while ((packet = socket->Recv())) {
-    // Process the received data
-    uint8_t buffer[packet->GetSize()];
-    packet->CopyData(buffer, packet->GetSize());
-    
-    // Assuming the payload is a string, you can convert it to a C++ string
-    std::string payload(reinterpret_cast<char*>(buffer), packet->GetSize());
+    static void RssiCallback(Ptr<const WifiPsdu> psdu,
+                             RxSignalInfo rxSignalInfo,
+                             WifiTxVector txVector,
+                             std::vector<bool> statusPerMpdu)
+    {
+        std::cout << rxSignalInfo << std::endl;
+    }
 
-    NS_LOG_UNCOND("Received " << packet->GetSize() << " bytes. Payload: " << payload);
-  }
-}
+    static void
+    OnDataReceived(Ptr<Socket> socket)
+    {
+        Ptr<Packet> packet;
+        while ((packet = socket->Recv()))
+        {
+            // Process the received data
+            uint8_t buffer[packet->GetSize()];
+            packet->CopyData(buffer, packet->GetSize());
 
-static void
-OnConnectionAccepted(Ptr<Socket> socket, const Address &address) {
-    NS_LOG_UNCOND("Received connection from " << address);
+            // Assuming the payload is a string, you can convert it to a C++ string
+            std::string payload(reinterpret_cast<char *>(buffer), packet->GetSize());
 
-    socket->SetRecvCallback(MakeCallback(&OnDataReceived));
-}
+            NS_LOG_UNCOND("Received " << packet->GetSize() << " bytes. Payload: " << payload);
+        }
+    }
 
-/*** IOTNET_SENSOR_HELPER ***/
+    static void
+    OnConnectionAccepted(Ptr<Socket> socket, const Address &address)
+    {
+        NS_LOG_UNCOND("Received connection from " << address);
 
-// public
-IoTNetSensorHelper::IoTNetSensorHelper(Address address)
-{
-    m_factory.SetTypeId(IoTNetSensor::GetTypeId());
-    SetAttribute("RemoteAddress", AddressValue(address));
-}
+        socket->SetRecvCallback(MakeCallback(&OnDataReceived));
+    }
 
-void
-IoTNetSensorHelper::SetAttribute(std::string name, const AttributeValue& value)
-{
-    m_factory.Set(name, value);
-}
+    /*** IOTNET_SENSOR_HELPER ***/
 
-ApplicationContainer
-IoTNetSensorHelper::Install(Ptr<Node> node) const
-{
-    return ApplicationContainer(InstallPriv(node));
-}
+    // public
+    IoTNetSensorHelper::IoTNetSensorHelper(Address address)
+    {
+        m_factory.SetTypeId(IoTNetSensor::GetTypeId());
+        SetAttribute("RemoteAddress", AddressValue(address));
+    }
 
-// private
-Ptr<Application>
-IoTNetSensorHelper::InstallPriv(Ptr<Node> node) const
-{
-    Ptr<Socket> socket = Socket::CreateSocket(node, TcpSocketFactory::GetTypeId());
-    socket->TraceConnectWithoutContext("CongestionWindow", MakeCallback(&CwndChange));
+    void
+    IoTNetSensorHelper::SetAttribute(std::string name, const AttributeValue &value)
+    {
+        m_factory.Set(name, value);
+    }
 
-    Ptr<IoTNetSensor> app = m_factory.Create<IoTNetSensor>();
-    app->SetSocket(socket);
-    node->AddApplication(app);
+    ApplicationContainer
+    IoTNetSensorHelper::Install(Ptr<NetDevice> device) const
+    {
+        return ApplicationContainer(InstallPriv(device));
+    }
 
-    return app;
-}
+    // private
+    Ptr<Application>
+    IoTNetSensorHelper::InstallPriv(Ptr<NetDevice> device) const
+    {
+        Ptr<Node> node = device->GetNode();
+        Ptr<Socket> socket = Socket::CreateSocket(node, TcpSocketFactory::GetTypeId());
+        socket->TraceConnectWithoutContext("CongestionWindow", MakeCallback(&CwndChange));
 
-/*** IOTNET_SERVER_HELPER ***/
+        Ptr<IoTNetSensor> app = m_factory.Create<IoTNetSensor>();
+        app->SetSocket(socket);
+        node->AddApplication(app);
 
-// public
-IoTNetServerHelper::IoTNetServerHelper(Address address)
-{
-    m_factory.SetTypeId(IoTNetServer::GetTypeId());
-    SetAttribute("Address", AddressValue(address));
-}
+        Ptr<WifiNetDevice> wifiNetDevice = device->GetObject<WifiNetDevice>();
+        Ptr<WifiPhy> wifiPhy = wifiNetDevice->GetPhy();
 
-void
-IoTNetServerHelper::SetAttribute(std::string name, const AttributeValue& value)
-{
-    m_factory.Set(name, value);
-}
+        wifiPhy->SetReceiveOkCallback(MakeCallback(&RssiCallback));
 
-ApplicationContainer
-IoTNetServerHelper::Install(Ptr<Node> node) const
-{
-    return ApplicationContainer(InstallPriv(node));
-}
+        return app;
+    }
 
-// private
-Ptr<Application>
-IoTNetServerHelper::InstallPriv(Ptr<Node> node) const
-{
-    Ptr<Socket> socket = Socket::CreateSocket(node, TcpSocketFactory::GetTypeId());
-    socket->TraceConnectWithoutContext("CongestionWindow", MakeCallback(&CwndChange));
+    /*** IOTNET_SERVER_HELPER ***/
 
-    Ptr<IoTNetServer> app = m_factory.Create<IoTNetServer>();
-    app->SetSocket(socket);
-    node->AddApplication(app);
+    // public
+    IoTNetServerHelper::IoTNetServerHelper(Address address)
+    {
+        m_factory.SetTypeId(IoTNetServer::GetTypeId());
+        SetAttribute("Address", AddressValue(address));
+    }
 
-    socket->SetAcceptCallback(
-      MakeNullCallback<bool, Ptr<Socket>, const Address &>(),
-      MakeCallback(&OnConnectionAccepted));
+    void
+    IoTNetServerHelper::SetAttribute(std::string name, const AttributeValue &value)
+    {
+        m_factory.Set(name, value);
+    }
 
-    return app;
-}
+    ApplicationContainer
+    IoTNetServerHelper::Install(Ptr<Node> node) const
+    {
+        return ApplicationContainer(InstallPriv(node));
+    }
+
+    // private
+    Ptr<Application>
+    IoTNetServerHelper::InstallPriv(Ptr<Node> node) const
+    {
+        Ptr<Socket> socket = Socket::CreateSocket(node, TcpSocketFactory::GetTypeId());
+        socket->TraceConnectWithoutContext("CongestionWindow", MakeCallback(&CwndChange));
+
+        Ptr<IoTNetServer> app = m_factory.Create<IoTNetServer>();
+        app->SetSocket(socket);
+        node->AddApplication(app);
+
+        socket->SetAcceptCallback(
+            MakeNullCallback<bool, Ptr<Socket>, const Address &>(),
+            MakeCallback(&OnConnectionAccepted));
+
+        return app;
+    }
 
 }
