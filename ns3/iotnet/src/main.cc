@@ -175,8 +175,8 @@ int main(int argc, char *argv[])
     // client
     IoTNetSensorHelper iotNetSensorHelper(sinkAddress);
     ApplicationContainer sensorApp = iotNetSensorHelper.Install("a1", wifiDevices.Get(1));
-    sensorApp.Start(Seconds(2.0));
-    sensorApp.Stop(Seconds(4.0));
+    sensorApp.Start(Seconds(1.0));
+    sensorApp.Stop(Seconds(9.0));
 
     Ipv4GlobalRoutingHelper::PopulateRoutingTables();
 

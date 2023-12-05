@@ -16,8 +16,20 @@ namespace ns3
     void SetName(std::string name);
     std::string LogPrefix();
 
+    std::time_t Now();
+    std::string FormatDate(std::time_t seconds);
+
   private:
+    void StartApplication() override;
+    void StopApplication() override;
+
+    virtual void AfterStart(); // alias for StartApplication
+    virtual void BeforeStop(); // alias for StopApplication
+
+  protected:
     std::string m_name;
+    EventId m_scheduleEvent;
+    bool m_running;
   };
 
 } // namespace ns3

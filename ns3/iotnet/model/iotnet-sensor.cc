@@ -28,21 +28,55 @@ namespace ns3
         return tid;
     }
 
-    void
-    IoTNetSensor::StartApplication()
+    void IoTNetSensor::Main()
     {
-        std::cout << LogPrefix() << "Start sensor app" << std::endl;
+    }
 
-        m_socket->Bind();
-        m_socket->Connect(m_peerAddress);
+    void IoTNetSensor::Loop()
+    {
+        if (!m_running)
+            return;
 
-        SendPacket("Hello, World!");
+        std::cout << LogPrefix() << "Preparing data" << std::endl;
+
+        std::stringstream ss;
+        ss << "{";
+        ss << "\"name\":\"" << m_name << "\", ";
+        ss << "\"at\":" << Now() * 1000 << ", ";
+        ss << "\"rssi\": [";
+
+        for (auto it = m_rssi.begin(); it != m_rssi.end(); it++)
+        {
+            if (it != m_rssi.begin())
+            {
+                ss << ", ";
+            }
+            ss << *it;
+        }
+        ss << "]";
+
+        ss << "}";
+
+        m_rssi.clear();
+
+        SendPacket(ss.str());
+
+        m_scheduleEvent = Simulator::Schedule(Seconds(1), &IoTNetSensor::Loop, this);
     }
 
     void
-    IoTNetSensor::StopApplication()
+    IoTNetSensor::AfterStart()
     {
-        std::cout << LogPrefix() << "Stop sensor app" << std::endl;
+        m_socket->Bind();
+        m_socket->Connect(m_peerAddress);
+
+        Main();
+        Loop();
+    }
+
+    void
+    IoTNetSensor::BeforeStop()
+    {
     }
 
     void
@@ -63,6 +97,7 @@ namespace ns3
                                          WifiTxVector txVector,
                                          std::vector<bool> statusPerMpdu)
     {
+        m_rssi.push_back(rxSignalInfo.rssi);
         std::cout << LogPrefix() << rxSignalInfo << std::endl;
     }
 

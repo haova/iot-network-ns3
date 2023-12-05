@@ -26,11 +26,16 @@ namespace ns3
                            std::vector<bool> statusPerMpdu);
 
   private:
-    void StartApplication() override;
-    void StopApplication() override;
+    void AfterStart() override;
+    void BeforeStop() override;
+
+    void Main();
+    void Loop();
 
     Address m_peerAddress;
     Ptr<Socket> m_socket;
+
+    std::vector<double> m_rssi;
   };
 
 } // namespace ns3

@@ -55,4 +55,10 @@ RUN ./ns3 configure --enable-examples --enable-tests --enable-python-bindings
 
 RUN mkdir output
 
+# # build json
+# WORKDIR /root
+# RUN wget https://github.com/nlohmann/json/archive/refs/tags/v3.11.3.tar.gz
+# RUN tar -xvzf v3.11.3.tar.gz
+# WORKDIR /root/json
+
 ENTRYPOINT ["tail", "-f", "/dev/null"]

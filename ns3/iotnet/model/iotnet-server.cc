@@ -30,18 +30,15 @@ namespace ns3
     }
 
     void
-    IoTNetServer::StartApplication()
+    IoTNetServer::AfterStart()
     {
-        std::cout << LogPrefix() << "Start server app" << std::endl;
-
         m_socket->Bind(m_address);
         m_socket->Listen();
     }
 
     void
-    IoTNetServer::StopApplication()
+    IoTNetServer::BeforeStop()
     {
-        std::cout << LogPrefix() << "Stop server app" << std::endl;
     }
 
     void
@@ -70,9 +67,11 @@ namespace ns3
             // forward to external server
             cpr::Response r = cpr::Post(
                 cpr::Url{"server-node:8080"},
+                cpr::Header{{"accept", "application/json"}},
+                cpr::Header{{"content-type", "application/json"}},
                 cpr::Authentication{"user", "pass", cpr::AuthMode::BASIC},
                 cpr::Parameters{{"anon", "true"}, {"key", "value"}},
-                cpr::Body{payload});
+                cpr::Body{{payload}});
         }
     }
 
