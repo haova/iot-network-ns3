@@ -5,6 +5,7 @@ services:
     volumes:
       - ./ns3/iotnet:/root/ns-allinone-3.40/ns-3.40/contrib/iotnet
       - ./ns3/output:/root/ns-allinone-3.40/ns-3.40/output
+      - ./ns3/ns-allinone-3.40/ns-3.40/src:/root/ns-allinone-3.40/ns-3.40/src
     links:
       - server-node
   server-node:

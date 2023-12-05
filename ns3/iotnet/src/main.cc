@@ -1,12 +1,3 @@
-/**
- *  Sensor         AP
- *  *              *
- *  |   10.1.3.0   |    10.1.1.0
- * n2      ))     n0 -------------- n1
- *      wireless     point-to-point  |
- *                                   Server
- */
-
 #include "ns3/applications-module.h"
 #include "ns3/core-module.h"
 #include "ns3/csma-module.h"
@@ -25,31 +16,34 @@ using namespace ns3;
 NS_LOG_COMPONENT_DEFINE("IoTNetworkSimulator");
 
 void RssiCallback(std::string context,
-                  Ptr<const Packet> packet,
+                  Ptr<const Packet> p,
                   double snr,
                   WifiMode mode,
                   WifiPreamble preamble)
 {
-    double rssi = 10 * std::log10(snr);
+    // double rssi = 10 * std::log10(snr);
+    Ptr<Packet> packet = p->Copy();
 
-    Ipv4Header ipv4Header;
-    packet->PeekHeader(ipv4Header);
+    // PacketMetadata m_metadata;
 
-    Ipv4Address sourceIp = ipv4Header.GetSource();
-    NS_LOG_UNCOND("Source IP Address: " << sourceIp);
+    // // TcpHeader ipv4Header;
+    // WifiMacHeader wifiMacHeader;
+    // packet->PeekHeader(wifiMacHeader);
+    // packet->RemoveAtStart(wmh.GetSerializedSize());
 
-    // Process the received data
-    uint8_t buffer[packet->GetSize()];
-    packet->CopyData(buffer, packet->GetSize());
+    // std::cout << ipv4Header << std::endl;
 
-    // Assuming the payload is a string, you can convert it to a C++ string
-    std::string payload(reinterpret_cast<char *>(buffer), packet->GetSize());
+    // std::cout << "--- Debug: " << std::endl;
+    // // PacketTagIterator i = packet->GetPacketTagIterator();
+    // // while (i.HasNext())
+    // // {
+    // //     PacketTagIterator::Item item = i.Next();
+    // //     std::cout << item.GetTypeId() << std::endl;
+    // // }
+    // packet->PrintPacketTags(std::cout);
+    // std::cout << "End Debug ---" << std::endl;
 
-    NS_LOG_UNCOND("---");
-    NS_LOG_UNCOND("+ Received " << packet->GetSize() << " bytes. Payload: " << payload);
-    NS_LOG_UNCOND("---");
-
-    // std::cout << "Received packet with RSSI: " << rssi << " dBm" << std::endl;
+    // std::cout << "Received packet with SNR: " << snr << std::endl;
 }
 
 NodeContainer
@@ -133,7 +127,7 @@ int main(int argc, char *argv[])
     p2pNodes.Create(2);
 
     // create wifi sensor nodes (n2)
-    NodeContainer wifiStaNodes = createSensorNodes(1);
+    NodeContainer wifiStaNodes = createSensorNodes(2);
 
     // get AP node (n0)
     NodeContainer wifiApNode = p2pNodes.Get(0);
@@ -193,8 +187,8 @@ int main(int argc, char *argv[])
     // pcap tracing
     pointToPoint.EnablePcapAll("output/iotnet");
 
-    // Config::Connect("/NodeList/*/DeviceList/*/$ns3::WifiNetDevice/Phy/$ns3::WifiPhy/State/RxOk",
-    //                 MakeCallback(&RssiCallback));
+    Config::Connect("/NodeList/*/DeviceList/*/$ns3::WifiNetDevice/Phy/$ns3::WifiPhy/State/RxOk",
+                    MakeCallback(&RssiCallback));
 
     // run simulation
     Simulator::Stop(Seconds(10.0));

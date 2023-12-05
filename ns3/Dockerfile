@@ -44,8 +44,7 @@ RUN cmake --install .
 
 # build ns3
 WORKDIR /root
-RUN wget https://www.nsnam.org/releases/ns-allinone-3.40.tar.bz2
-RUN tar -xvjf ns-allinone-3.40.tar.bz2
+ADD ./ns-allinone-3.40 ./ns-allinone-3.40
 
 WORKDIR /root/ns-allinone-3.40/ns-3.40
 RUN ./ns3 configure --enable-examples --enable-tests --enable-python-bindings

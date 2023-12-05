@@ -12,7 +12,7 @@ namespace ns3
     static void
     CwndChange(uint32_t oldCwnd, uint32_t newCwnd)
     {
-        NS_LOG_UNCOND("Cwnd change at " << Simulator::Now().GetSeconds() << " with value " << newCwnd);
+        std::cout << "Cwnd change at " << Simulator::Now().GetSeconds() << " with value " << newCwnd << std::endl;
     }
 
     static void RssiCallback(Ptr<const WifiPsdu> psdu,
@@ -21,6 +21,20 @@ namespace ns3
                              std::vector<bool> statusPerMpdu)
     {
         std::cout << rxSignalInfo << std::endl;
+        // psdu->Print(std::cout);
+        // std::cout << std::endl;
+
+        // std::cout << psdu->GetPacket() << std::endl;
+        // OnDataReceived();
+
+        // Ptr<Packet> packet = psdu->GetPacket();
+        // uint8_t buffer[packet->GetSize()];
+        // packet->CopyData(buffer, packet->GetSize());
+
+        // // Assuming the payload is a string, you can convert it to a C++ string
+        // std::string payload(reinterpret_cast<char *>(buffer), packet->GetSize());
+
+        // std::cout << "Received " << packet->GetSize() << " bytes. Payload: " << payload << std::endl;
     }
 
     static void
@@ -29,6 +43,8 @@ namespace ns3
         Ptr<Packet> packet;
         while ((packet = socket->Recv()))
         {
+            packet->PrintPacketTags(std::cout);
+
             // Process the received data
             uint8_t buffer[packet->GetSize()];
             packet->CopyData(buffer, packet->GetSize());
@@ -36,14 +52,14 @@ namespace ns3
             // Assuming the payload is a string, you can convert it to a C++ string
             std::string payload(reinterpret_cast<char *>(buffer), packet->GetSize());
 
-            NS_LOG_UNCOND("Received " << packet->GetSize() << " bytes. Payload: " << payload);
+            std::cout << "Received " << packet->GetSize() << " bytes. Payload: " << payload << std::endl;
         }
     }
 
     static void
     OnConnectionAccepted(Ptr<Socket> socket, const Address &address)
     {
-        NS_LOG_UNCOND("Received connection from " << address);
+        std::cout << "Received connection from " << address << std::endl;
 
         socket->SetRecvCallback(MakeCallback(&OnDataReceived));
     }
@@ -83,8 +99,9 @@ namespace ns3
 
         Ptr<WifiNetDevice> wifiNetDevice = device->GetObject<WifiNetDevice>();
         Ptr<WifiPhy> wifiPhy = wifiNetDevice->GetPhy();
+        Ptr<WifiPhyStateHelper> wifiState = wifiPhy->GetState();
 
-        wifiPhy->SetReceiveOkCallback(MakeCallback(&RssiCallback));
+        wifiState->SetTraceReceiveOkCallback(MakeCallback(&RssiCallback));
 
         return app;
     }
