@@ -60,5 +60,12 @@ tshark -q -r output/iotnet-0-0.pcap -z follow,tcp,ascii,0
 - [x] Sensor node can send a TCP packet.
 - [x] Server node can received a TCP packet.
 - [x] Sensor node can read rssi, snr.
-- [ ] Sensor node should prepare data for send.
+- [x] Sensor node should prepare data for send.
 - [x] Server node can forward packet to outside.
+- [ ] PDR - Thiết bị thật (Kiệt)
+- [ ] PDR - Giả lập (-)
+- [ ] Jammer - Thiết bị thật (Hưng - deauth, Hào)
+- [ ] Jammer - Giả lập - source code https://codereview.appspot.com/1055041/#ps321001 (Hưng)
+- [ ] Model detection - (Nhật)
+  - source code 1: https://github.com/kasturi710/Jamming-Attack-Detection-and-Classification
+  - source code 2: https://github.com/AMHD/Jamming-Detection-in-IoT-Wireless-Networks-An-Edge-AI-Based-Approach

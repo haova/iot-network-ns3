@@ -1,0 +1,16 @@
+[{
+  "sensor_name": "test sensor",
+  "pdr": 2,
+  "rss": 1,
+  "updated_at": "2023-10-31T01:30:00.000-05:00"
+},{
+  "sensor_name": "test sensor 2",
+  "pdr": 3,
+  "rss": 2,
+  "updated_at": "2023-10-31T01:30:00.000-05:00"
+},{
+  "sensor_name": "test sensor 3",
+  "pdr": 4,
+  "rss": 3,
+  "updated_at": "2023-10-31T01:30:00.000-05:00"
+}]
