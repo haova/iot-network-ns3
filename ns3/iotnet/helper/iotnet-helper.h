@@ -18,9 +18,10 @@ namespace ns3
     IoTNetSensorHelper(Address address);
     void SetAttribute(std::string name, const AttributeValue &value);
     ApplicationContainer Install(Ptr<NetDevice> device) const;
+    ApplicationContainer Install(std::string name, Ptr<NetDevice> device) const;
 
   private:
-    Ptr<Application> InstallPriv(Ptr<NetDevice> device) const;
+    Ptr<Application> InstallPriv(std::string name, Ptr<NetDevice> device) const;
 
     ObjectFactory m_factory;
   };
@@ -30,10 +31,11 @@ namespace ns3
   public:
     IoTNetServerHelper(Address address);
     void SetAttribute(std::string name, const AttributeValue &value);
-    ApplicationContainer Install(Ptr<Node> node) const;
+    ApplicationContainer Install(Ptr<NetDevice> device) const;
+    ApplicationContainer Install(std::string name, Ptr<NetDevice> device) const;
 
   private:
-    Ptr<Application> InstallPriv(Ptr<Node> node) const;
+    Ptr<Application> InstallPriv(std::string name, Ptr<NetDevice> device) const;
 
     ObjectFactory m_factory;
   };

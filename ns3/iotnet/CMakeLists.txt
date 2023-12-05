@@ -16,10 +16,12 @@ link_libraries(cpr::cpr)
 build_lib(
     LIBNAME iotnet
     SOURCE_FILES model/iotnet.cc
+                 model/iotnet-app.cc
                  model/iotnet-sensor.cc
                  model/iotnet-server.cc
                  helper/iotnet-helper.cc
     HEADER_FILES model/iotnet.h
+                 model/iotnet-app.h
                  model/iotnet-sensor.h
                  model/iotnet-server.h
                  helper/iotnet-helper.h

@@ -1,30 +1,24 @@
 #ifndef IOTNET_SERVER_H
 #define IOTNET_SERVER_H
 
+#include "iotnet-app.h"
+
 #include "ns3/core-module.h"
 #include "ns3/internet-module.h"
 #include "ns3/network-module.h"
 
-// Add a doxygen group for this module.
-// If you have more than one file, this should be in only one of them.
-/**
- * \defgroup iotnet Description of the iotnet
- */
-
 namespace ns3
 {
-
-// Each class should be documented using Doxygen,
-// and have an \ingroup iotnet directive
-
-class IoTNetServer : public Application
-{
+  class IoTNetServer : public IoTNetApp
+  {
   public:
     IoTNetServer();
     ~IoTNetServer() override;
 
     static TypeId GetTypeId();
     void SetSocket(Ptr<Socket> socket);
+    void ConnectionAcceptedCallback(Ptr<Socket> socket, const Address &address);
+    void DataReceivedCallback(Ptr<Socket> socket);
 
   private:
     void StartApplication() override;
@@ -32,7 +26,7 @@ class IoTNetServer : public Application
 
     Address m_address;
     Ptr<Socket> m_socket;
-};
+  };
 
 } // namespace ns3
 

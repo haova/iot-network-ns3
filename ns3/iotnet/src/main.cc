@@ -120,7 +120,7 @@ int main(int argc, char *argv[])
     cmd.Parse(argc, argv);
 
     // realtime
-    // GlobalValue::Bind("SimulatorImplementationType", StringValue("ns3::RealtimeSimulatorImpl"));
+    GlobalValue::Bind("SimulatorImplementationType", StringValue("ns3::RealtimeSimulatorImpl"));
 
     // create p2p nodes (n0, n1)
     NodeContainer p2pNodes;
@@ -168,13 +168,13 @@ int main(int argc, char *argv[])
     Address sinkAddress(InetSocketAddress(p2pInterfaces.GetAddress(1), sinkPort));
 
     IoTNetServerHelper iotNetServerHelper(sinkAddress);
-    ApplicationContainer sinkApps = iotNetServerHelper.Install(serverNode.Get(0));
+    ApplicationContainer sinkApps = iotNetServerHelper.Install("c1", p2pDevices.Get(1));
     sinkApps.Start(Seconds(0.));
     sinkApps.Stop(Seconds(10.));
 
     // client
     IoTNetSensorHelper iotNetSensorHelper(sinkAddress);
-    ApplicationContainer sensorApp = iotNetSensorHelper.Install(wifiDevices.Get(1));
+    ApplicationContainer sensorApp = iotNetSensorHelper.Install("a1", wifiDevices.Get(1));
     sensorApp.Start(Seconds(2.0));
     sensorApp.Stop(Seconds(4.0));
 

@@ -1,24 +1,18 @@
 #ifndef IOTNET_SENSOR_H
 #define IOTNET_SENSOR_H
 
+#include "iotnet-app.h"
+
 #include "ns3/core-module.h"
 #include "ns3/internet-module.h"
 #include "ns3/network-module.h"
-
-// Add a doxygen group for this module.
-// If you have more than one file, this should be in only one of them.
-/**
- * \defgroup iotnet Description of the iotnet
- */
+#include "ns3/wifi-module.h"
+#include "ns3/yans-wifi-helper.h"
 
 namespace ns3
 {
-
-// Each class should be documented using Doxygen,
-// and have an \ingroup iotnet directive
-
-class IoTNetSensor : public Application
-{
+  class IoTNetSensor : public IoTNetApp
+  {
   public:
     IoTNetSensor();
     ~IoTNetSensor() override;
@@ -26,6 +20,10 @@ class IoTNetSensor : public Application
     static TypeId GetTypeId();
     void SetSocket(Ptr<Socket> socket);
     void SendPacket(std::string message);
+    void ReceiveOkCallback(Ptr<const WifiPsdu> psdu,
+                           RxSignalInfo rxSignalInfo,
+                           WifiTxVector txVector,
+                           std::vector<bool> statusPerMpdu);
 
   private:
     void StartApplication() override;
@@ -33,7 +31,7 @@ class IoTNetSensor : public Application
 
     Address m_peerAddress;
     Ptr<Socket> m_socket;
-};
+  };
 
 } // namespace ns3
 
