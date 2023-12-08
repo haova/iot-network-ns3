@@ -30,6 +30,10 @@ namespace ns3
 
     void IoTNetSensor::Main()
     {
+        m_payload["name"] = m_name;
+        m_payload["rssi"] = {};
+        m_payload["snr"] = {};
+        m_payload["at"] = 0;
     }
 
     void IoTNetSensor::Loop()
@@ -39,27 +43,12 @@ namespace ns3
 
         std::cout << LogPrefix() << "Preparing data" << std::endl;
 
-        std::stringstream ss;
-        ss << "{";
-        ss << "\"name\":\"" << m_name << "\", ";
-        ss << "\"at\":" << Now() * 1000 << ", ";
-        ss << "\"rssi\": [";
+        m_payload["at"] = Now() * 1000;
 
-        for (auto it = m_rssi.begin(); it != m_rssi.end(); it++)
-        {
-            if (it != m_rssi.begin())
-            {
-                ss << ", ";
-            }
-            ss << *it;
-        }
-        ss << "]";
+        SendPacket(m_payload.dump());
 
-        ss << "}";
-
-        m_rssi.clear();
-
-        SendPacket(ss.str());
+        m_payload["rssi"].clear();
+        m_payload["snr"].clear();
 
         m_scheduleEvent = Simulator::Schedule(Seconds(1), &IoTNetSensor::Loop, this);
     }
@@ -97,8 +86,12 @@ namespace ns3
                                          WifiTxVector txVector,
                                          std::vector<bool> statusPerMpdu)
     {
-        m_rssi.push_back(rxSignalInfo.rssi);
-        std::cout << LogPrefix() << rxSignalInfo << std::endl;
+        if (m_running)
+        {
+            m_payload["rssi"].push_back(rxSignalInfo.rssi);
+            m_payload["snr"].push_back(rxSignalInfo.snr);
+            std::cout << LogPrefix() << rxSignalInfo << std::endl;
+        }
     }
 
 } // namespace ns3

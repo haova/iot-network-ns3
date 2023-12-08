@@ -9,6 +9,9 @@
 #include "ns3/wifi-module.h"
 #include "ns3/yans-wifi-helper.h"
 
+#include "nlohmann/json.hpp"
+using json = nlohmann::json;
+
 namespace ns3
 {
   class IoTNetSensor : public IoTNetApp
@@ -34,8 +37,7 @@ namespace ns3
 
     Address m_peerAddress;
     Ptr<Socket> m_socket;
-
-    std::vector<double> m_rssi;
+    json m_payload;
   };
 
 } // namespace ns3

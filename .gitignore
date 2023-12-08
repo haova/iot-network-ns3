@@ -1,5 +1,6 @@
 ns3/output/*
 .vscode
+.tmp
 
 !.gitkeep
 

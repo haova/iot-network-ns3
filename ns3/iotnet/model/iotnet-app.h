@@ -12,6 +12,8 @@ namespace ns3
   class IoTNetApp : public Application
   {
   public:
+    IoTNetApp();
+
     void CwndChangeCallback(uint32_t oldCwnd, uint32_t newCwnd);
     void SetName(std::string name);
     std::string LogPrefix();

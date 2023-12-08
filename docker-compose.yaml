@@ -5,11 +5,14 @@ services:
     volumes:
       - ./ns3/iotnet:/root/ns-allinone-3.40/ns-3.40/contrib/iotnet
       - ./ns3/output:/root/ns-allinone-3.40/ns-3.40/output
-      - ./ns3/ns-allinone-3.40/ns-3.40/src:/root/ns-allinone-3.40/ns-3.40/src
+      - ./ns3/wifi:/root/ns-allinone-3.40/ns-3.40/src/wifi
     links:
       - server-node
   server-node:
     container_name: server-node
-    build: ./node
+    build: ./next-app
+    ports:
+      - 3000:3000
+      - 3001:3001
     volumes:
-      - ./node/server:/root/app
+      - ./next-app:/root/app

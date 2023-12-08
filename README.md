@@ -11,7 +11,23 @@ Simulate Jamming in IoT Network using NS3.
   - 220202020 - Nguyễn Duy Minh Nhật
   - 230202009 - Nguyễn Tấn Kiệt
 
+## Directory Structure
+
+```txt
+$
+|- ns3 (Network Simulation)
+|- next-app (Web Application Server)
+|- sensor-node (Sensor Node Firmware)
+```
+
 ## Prerequisites
+
+### Hardware
+
+- Wifi SoC ESP8266 V12
+- USB UART CP2102
+
+### Software
 
 - Docker CE
 - Docker Compose
@@ -22,16 +38,12 @@ Simulate Jamming in IoT Network using NS3.
 sudo docker compose up
 ```
 
+## Simulation Network
+
 Access docker container.
 
 ```bash
 sudo docker exec -it iotnet-ns3 /bin/bash
-```
-
-Run example
-
-```bash
-./ns3 run examples/tutorial/second
 ```
 
 Run IoT Network
@@ -39,6 +51,8 @@ Run IoT Network
 ```bash
 ./ns3 run scratch/iotnet/main
 ```
+
+## Web Application Server
 
 Run Real Server
 
@@ -54,6 +68,10 @@ npm run dev
 tshark -r output/iotnet-0-0.pcap
 tshark -q -r output/iotnet-0-0.pcap -z follow,tcp,ascii,0
 ```
+
+## ESP8266
+
+### Devices
 
 ## Checklist
 

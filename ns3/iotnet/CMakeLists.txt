@@ -10,10 +10,12 @@ if(${ENABLE_EXAMPLES})
         )
 endif()
 
+include_directories(/root/json/include)
+
 find_package(cpr REQUIRED)
 link_libraries(cpr::cpr)
 
-build_lib(
+build_lib (
     LIBNAME iotnet
     SOURCE_FILES model/iotnet.cc
                  model/iotnet-app.cc

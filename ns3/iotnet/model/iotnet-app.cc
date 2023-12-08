@@ -5,6 +5,12 @@
 
 namespace ns3
 {
+
+  IoTNetApp::IoTNetApp()
+  {
+    m_running = false;
+  }
+
   void
   IoTNetApp::AfterStart()
   {
@@ -18,7 +24,7 @@ namespace ns3
   void
   IoTNetApp::StartApplication()
   {
-    std::cout << LogPrefix() << "Starting sensor app" << std::endl;
+    std::cout << LogPrefix() << "Starting app" << std::endl;
     m_running = true;
 
     AfterStart();
@@ -27,7 +33,7 @@ namespace ns3
   void
   IoTNetApp::StopApplication()
   {
-    std::cout << LogPrefix() << "Stopping sensor app" << std::endl;
+    std::cout << LogPrefix() << "Stopping app" << std::endl;
     BeforeStop();
 
     m_running = false;

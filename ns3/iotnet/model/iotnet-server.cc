@@ -66,11 +66,9 @@ namespace ns3
 
             // forward to external server
             cpr::Response r = cpr::Post(
-                cpr::Url{"server-node:8080"},
+                cpr::Url{"server-node:3000/api/reading"},
                 cpr::Header{{"accept", "application/json"}},
                 cpr::Header{{"content-type", "application/json"}},
-                cpr::Authentication{"user", "pass", cpr::AuthMode::BASIC},
-                cpr::Parameters{{"anon", "true"}, {"key", "value"}},
                 cpr::Body{{payload}});
         }
     }
