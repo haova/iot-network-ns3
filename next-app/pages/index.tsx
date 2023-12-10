@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useState } from 'react'
 import Marquee from 'react-fast-marquee'
-import { Col, Row, Layout, Table, Alert } from 'antd/lib'
+import { Col, Row, Layout, Table, Alert, Badge } from 'antd/lib'
 
 export default () => {
     const [dataSource, setDataSource] = useState([])
     const [isWarning, setIsWarning] = useState(false)
 
     const tableData = useMemo(
-        () => dataSource.map((item: any) => ({ ...item, updated_at: new Date(item.updated_at).toLocaleString() })),
+        () => dataSource.map((item: any) => ({ ...item, updatedAt: new Date(item.at).toLocaleString() })),
         [dataSource]
     )
 
@@ -16,16 +16,15 @@ export default () => {
     useEffect(() => {
         ws.onmessage = (event) => {
             const data = JSON.parse(event.data)
-            setDataSource(data.sensors.map((item: any) => item.doc))
-            setIsWarning(data.isWarning)
+            setDataSource(data.readings.map((item: any) => item.doc))
         }
     }, [])
 
     const columns = [
         {
             title: 'Sensor Name',
-            dataIndex: 'sensor_name',
-            key: 'sensor_name',
+            dataIndex: 'name',
+            key: 'name',
         },
         {
             title: 'PDR',
@@ -39,8 +38,14 @@ export default () => {
         },
         {
             title: 'Last Updated',
-            dataIndex: 'updated_at',
-            key: 'updated_at',
+            dataIndex: 'updatedAt',
+            key: 'updatedAt',
+        },
+        {
+            title: 'Status',
+            dataIndex: 'isWarning',
+            key: 'isWarning',
+            render: (isWarning: boolean | undefined) => <Badge color={ isWarning === true ? 'orange' : isWarning === false ? 'green' : 'yellow' } text={ isWarning === true ? 'Possibly Jammed' : isWarning === false ? 'Active' : '-'} />
         },
     ]
 
@@ -48,15 +53,6 @@ export default () => {
         <Layout style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%' }}>
             <Layout.Header style={{ color: 'white', fontSize: '1.5em', fontWeight: 'bold' }}>Dashboard</Layout.Header>
             <Layout.Content>
-                <Alert
-                    banner
-                    message={
-                        <Marquee pauseOnHover gradient={false}>
-                            Some warning
-                        </Marquee>
-                    }
-                    style={{ display: isWarning ? 'flex' : 'none' }}
-                />
                 <Row>
                     <Col span={24}>
                         <Table dataSource={tableData} columns={columns} style={{ margin: '10px' }} />

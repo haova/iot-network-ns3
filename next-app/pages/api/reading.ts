@@ -1,6 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import db from '../../lib/db'
-import { ArrayOfReadings } from '../../schemas/Reading'
+import { Reading } from '../../schemas/Reading'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
     const { method } = req
@@ -8,7 +8,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     switch (method) {
         case 'POST':
             try {
-                const response = ArrayOfReadings.safeParse(req.body)
+                const response = Reading.safeParse(req.body)
 
                 if (!response.success) {
                     const { errors } = response.error
@@ -17,8 +17,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                         error: { message: 'Invalid request', errors },
                     })
                 }
+                
+                const readings = response.data.pdr.map((pdr, index) => ({
+                    name: response.data.name,
+                    pdr: pdr,
+                    rss: response.data.rss[index],
+                    at: response.data.at+index,
+                    _id: response.data.name + (response.data.at+index)
+                }))
 
-                db.bulkDocs(response.data.map((reading: any): any => ({ ...reading, _id: reading.sensor_name + reading.updated_at })))
+                db.bulkDocs(readings)
 
                 res.status(200).end()
             } catch (e) {

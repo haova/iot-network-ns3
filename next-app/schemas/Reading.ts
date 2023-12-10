@@ -1,10 +1,10 @@
 import { z } from 'zod'
 
 const Reading = z.object({
-    sensor_name: z.string(),
-    pdr: z.number(),
-    rss: z.number(),
-    updated_at: z.coerce.date(),
+    name: z.string(),
+    pdr: z.array(z.number()),
+    rss: z.array(z.number()),
+    at: z.number(),
 })
 
 const ArrayOfReadings = z.array(Reading)
