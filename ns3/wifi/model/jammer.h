@@ -25,7 +25,7 @@
 #include "ns3/object.h"
 #include "ns3/traced-callback.h"
 #include "ns3/ptr.h"
-#include "ns3/random-variable-stream.h"
+#include "ns3/random-variable.h"
 #include "ns3/wireless-module-utility.h"
 #include "ns3/energy-source.h"
 
@@ -121,7 +121,8 @@ public:
    */
   bool IsJammerOn (void) const;
 
-  void OptimalChooseJammer(uint32_t channel);
+
+private:
   /**
    * \brief Performs jamming.
    *
@@ -167,14 +168,6 @@ public:
    */
   virtual void DoEndTxHandler (Ptr<Packet> packet, double txPower) = 0;
 
-  virtual void Optimal(uint32_t channel) =0;
-
-
-
-private:
-  
-
-  
 private:
   uint32_t m_id;
   bool m_jammerOn;

@@ -72,13 +72,6 @@ Jammer::StartJammer (void)
 }
 
 void
-Jammer::OptimalChooseJammer(uint32_t channel){
-  NS_LOG_FUNCTION(this);
-  Optimal(channel);
-
-}
-
-void
 Jammer::StopJammer (void)
 {
   NS_LOG_FUNCTION (this);
@@ -90,8 +83,6 @@ bool
 Jammer::StartRxHandler (Ptr<Packet> packet, double startRss)
 {
   NS_LOG_FUNCTION (this << packet << startRss);
-  NS_LOG_FUNCTION (this << packet->GetSize());
-  
   if (m_jammerOn)
     {
       return DoStartRxHandler (packet, startRss);
@@ -131,7 +122,6 @@ Jammer::EndTxHandler (Ptr<Packet> packet, double txPower)
       NS_LOG_DEBUG ("At Node #" << m_id << ", Jammer is OFF, ignoring EndTx!");
     }
 }
-
 
 /*
  * Protected functions start here.
