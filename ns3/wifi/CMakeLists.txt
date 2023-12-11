@@ -12,6 +12,7 @@ set(source_files
     helper/wifi-mac-helper.cc
     helper/wifi-radio-energy-model-helper.cc
     helper/yans-wifi-helper.cc
+    helper/wireless-module-utility-helper.cc
     model/adhoc-wifi-mac.cc
     model/ampdu-subframe-header.cc
     model/ampdu-tag.cc
@@ -154,6 +155,8 @@ set(source_files
     model/yans-error-rate-model.cc
     model/yans-wifi-channel.cc
     model/yans-wifi-phy.cc
+    model/wireless-module-utility.cc
+    helper/wireless-module-utility-container.cc
 )
 
 set(header_files
@@ -163,6 +166,7 @@ set(header_files
     helper/wifi-mac-helper.h
     helper/wifi-radio-energy-model-helper.h
     helper/yans-wifi-helper.h
+    helper/wireless-module-utility-helper.h
     model/adhoc-wifi-mac.h
     model/ampdu-subframe-header.h
     model/ampdu-tag.h
@@ -313,6 +317,8 @@ set(header_files
     model/yans-error-rate-model.h
     model/yans-wifi-channel.h
     model/yans-wifi-phy.h
+    model/wireless-module-utility.h
+    helper/wireless-module-utility-container.h
 )
 
 build_lib(

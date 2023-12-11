@@ -35,7 +35,7 @@ $
 ## Setup
 
 ```bash
-sudo docker compose up
+docker compose up
 ```
 
 ## Simulation Network
@@ -43,7 +43,7 @@ sudo docker compose up
 Access docker container.
 
 ```bash
-sudo docker exec -it iotnet-ns3 /bin/bash
+docker exec -it iotnet-ns3 /bin/bash
 ```
 
 Run IoT Network
@@ -57,7 +57,7 @@ Run IoT Network
 Run Real Server
 
 ```bash
-sudo docker exec -it server-node /bin/bash
+docker exec -it server-node /bin/bash
 npm i
 npm run dev
 ```
@@ -80,10 +80,12 @@ tshark -q -r output/iotnet-0-0.pcap -z follow,tcp,ascii,0
 - [x] Sensor node can read rssi, snr.
 - [x] Sensor node should prepare data for send.
 - [x] Server node can forward packet to outside.
-- [ ] PDR - Thiết bị thật (Kiệt)
+- [x] PDR - Thiết bị thật (Kiệt)
 - [ ] PDR - Giả lập (-)
-- [ ] Jammer - Thiết bị thật (Hưng - deauth, Hào)
+- [-] Jammer - Thiết bị thật (Hưng - deauth, Hào)
 - [ ] Jammer - Giả lập - source code https://codereview.appspot.com/1055041/#ps321001 (Hưng)
-- [ ] Model detection - (Nhật)
+- [x] Model detection - (Nhật)
   - source code 1: https://github.com/kasturi710/Jamming-Attack-Detection-and-Classification
   - source code 2: https://github.com/AMHD/Jamming-Detection-in-IoT-Wireless-Networks-An-Edge-AI-Based-Approach
+- [ ] Implement model detection into next-app (Nhật)
+- [ ]

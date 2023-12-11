@@ -15,35 +15,20 @@ using namespace ns3;
 
 NS_LOG_COMPONENT_DEFINE("IoTNetworkSimulator");
 
-void RssiCallback(std::string context,
-                  Ptr<const Packet> p,
-                  double snr,
-                  WifiMode mode,
-                  WifiPreamble preamble)
+void NodeRss(double oldValue, double rss)
 {
-    // double rssi = 10 * std::log10(snr);
-    Ptr<Packet> packet = p->Copy();
+    NS_LOG_UNCOND(Simulator::Now().GetSeconds() << "s Node RSS = " << rss << "W");
+}
 
-    // PacketMetadata m_metadata;
+void NodePdr(double oldValue, double pdr)
+{
+    NS_LOG_UNCOND(Simulator::Now().GetSeconds() << "s Node PDR = " << pdr);
+}
 
-    // // TcpHeader ipv4Header;
-    // WifiMacHeader wifiMacHeader;
-    // packet->PeekHeader(wifiMacHeader);
-    // packet->RemoveAtStart(wmh.GetSerializedSize());
-
-    // std::cout << ipv4Header << std::endl;
-
-    // std::cout << "--- Debug: " << std::endl;
-    // // PacketTagIterator i = packet->GetPacketTagIterator();
-    // // while (i.HasNext())
-    // // {
-    // //     PacketTagIterator::Item item = i.Next();
-    // //     std::cout << item.GetTypeId() << std::endl;
-    // // }
-    // packet->PrintPacketTags(std::cout);
-    // std::cout << "End Debug ---" << std::endl;
-
-    // std::cout << "Received packet with SNR: " << snr << std::endl;
+void NodeThroughputRx(double oldValue, double rxThroughput)
+{
+    NS_LOG_UNCOND(Simulator::Now().GetSeconds() << "s Node RX throughput = "
+                                                << rxThroughput);
 }
 
 NodeContainer
@@ -101,6 +86,25 @@ setupWifi(NodeContainer sensorNodes, NodeContainer apNode)
     mobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
     mobility.Install(apNode);
 
+    // wireless module ultility
+    WirelessModuleUtilityHelper utilityHelper;
+
+    std::vector<std::string> AllInclusionList;
+    std::vector<std::string> AllExclusionList;
+
+    AllInclusionList.push_back("ns3::UdpHeader");
+    AllExclusionList.push_back("ns3::olsr::PacketHeader");
+
+    utilityHelper.SetInclusionList(AllInclusionList);
+    utilityHelper.SetExclusionList(AllExclusionList);
+
+    WirelessModuleUtilityContainer utilities = utilityHelper.InstallAll();
+
+    Ptr<WirelessModuleUtility> utilityPtr = utilities.Get(0);
+    utilityPtr->TraceConnectWithoutContext("Rss", MakeCallback(&NodeRss));
+    utilityPtr->TraceConnectWithoutContext("Pdr", MakeCallback(&NodePdr));
+    utilityPtr->TraceConnectWithoutContext("ThroughputRx", MakeCallback(&NodeThroughputRx));
+
     // pcap
     phy.SetPcapDataLinkType(WifiPhyHelper::DLT_IEEE802_11_RADIO);
     phy.EnablePcap("output/iotnet", apDevices.Get(0));
@@ -127,7 +131,7 @@ int main(int argc, char *argv[])
     p2pNodes.Create(2);
 
     // create wifi sensor nodes (n2)
-    NodeContainer wifiStaNodes = createSensorNodes(2);
+    NodeContainer wifiStaNodes = createSensorNodes(1);
 
     // get AP node (n0)
     NodeContainer wifiApNode = p2pNodes.Get(0);
@@ -186,9 +190,6 @@ int main(int argc, char *argv[])
 
     // pcap tracing
     pointToPoint.EnablePcapAll("output/iotnet");
-
-    Config::Connect("/NodeList/*/DeviceList/*/$ns3::WifiNetDevice/Phy/$ns3::WifiPhy/State/RxOk",
-                    MakeCallback(&RssiCallback));
 
     // run simulation
     Simulator::Stop(Seconds(10.0));
