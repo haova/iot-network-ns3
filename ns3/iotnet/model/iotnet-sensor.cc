@@ -90,7 +90,7 @@ namespace ns3
         {
             m_payload["rssi"].push_back(rxSignalInfo.rssi);
             m_payload["snr"].push_back(rxSignalInfo.snr);
-            std::cout << LogPrefix() << rxSignalInfo << std::endl;
+            // std::cout << LogPrefix() << rxSignalInfo << std::endl;
         }
     }
 

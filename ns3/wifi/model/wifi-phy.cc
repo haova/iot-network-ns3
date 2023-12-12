@@ -395,6 +395,8 @@ namespace ns3
                 NS_LOG_WARN("Mobility not found, propagation models might not work properly");
             }
         }
+
+        InitDriver();
     }
 
     void
@@ -2269,8 +2271,42 @@ namespace ns3
     }
 
     // @iotnet
-    bool
-        WifiPhy::DriverStartRx(/*Ptr<Packet> packet, double startRssW*/)
+    void
+    WifiPhy::InitDriver(void)
+    {
+        NS_LOG_FUNCTION(this);
+        Ptr<NetDevice> device = WifiPhy::GetDevice();
+        m_node = device->GetNode();
+        // SetCurrentWifiMode(WifiPhy::GetMode(0));
+
+        if (!m_isDriverInitialized)
+        {
+            NS_LOG_UNCOND("NslWifiPhy:Driver being initialized at Node #" << m_node->GetId());
+            // setting default wifi mode
+            // SetCurrentWifiMode (m_modes[0]);
+            m_utility = m_node->GetObject<WirelessModuleUtility>();
+
+            // if (m_utility != NULL)
+            // {
+            //     m_utility->SetRssMeasurementCallback(MakeCallback(&NslWifiPhy::MeasureRss, this));
+            //     m_utility->SetSendPacketCallback(MakeCallback(&NslWifiPhy::UtilitySendPacket, this));
+            //     m_utility->SetChannelSwitchCallback(MakeCallback(&NslWifiPhy::SetChannelNumber, this));
+            //     UpdatePhyLayerInfo();
+            // }
+            m_isDriverInitialized = true;
+        }
+        // else
+        // {
+        //     NS_LOG_DEBUG("NslWifiPhy:Driver already initialized at Node #" << m_node->GetId());
+        // }
+        // // show some debug messages
+        // if (m_utility == NULL)
+        // {
+        //     NS_LOG_DEBUG("NslWifiPhy:Utility module is *not* installed on Node #" << m_node->GetId());
+        // }
+    }
+
+    bool WifiPhy::DriverStartRx(/*Ptr<Packet> packet, double startRssW*/)
     {
 
         // NS_LOG_FUNCTION(this << packet << startRssW);
@@ -2278,14 +2314,14 @@ namespace ns3
         bool isPacketToBeReceived = true;
 
         // notify utility for start of RX
-        // if (m_utility != NULL)
-        // {
-        //     isPacketToBeReceived = m_utility->StartRxHandler(packet, startRssW);
-        // }
-        // else
-        // {
-        //     NS_LOG_DEBUG("NslWifiPhy:Utility module is *not* installed on Node #" << m_node->GetId());
-        // }
+        if (m_utility != NULL)
+        {
+            isPacketToBeReceived = m_utility->StartRxHandler(/*packet, startRssW*/);
+        }
+        else
+        {
+            NS_LOG_UNCOND("NslWifiPhy:Utility module is *not* installed on Node #" << m_node->GetId());
+        }
 
         // Simulator::Schedule(m_state->GetDelayUntilIdle(), &NslWifiPhy::DriverEndTx, this, packet, startRssW);
 

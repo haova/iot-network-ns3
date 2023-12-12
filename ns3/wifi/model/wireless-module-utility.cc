@@ -238,6 +238,7 @@ namespace ns3
   WirelessModuleUtility::SetStartRxCallback(UtilityRxCallback startRxCallback)
   {
     NS_LOG_FUNCTION(this);
+    NS_LOG_UNCOND("Log in ultility");
     m_startRxCallback = startRxCallback;
   }
 
@@ -282,17 +283,16 @@ namespace ns3
     return m_phyLayerInfo;
   }
 
-  bool
-  WirelessModuleUtility::StartRxHandler(Ptr<Packet> packet, double startRssW)
+  bool WirelessModuleUtility::StartRxHandler(/*Ptr<Packet> packet, double startRssW*/)
   {
-    NS_LOG_FUNCTION(this << packet << startRssW);
+    // NS_LOG_FUNCTION(this << packet << startRssW);
 
     UpdateRss();
 
     // notify jammer or jamming mitigation
     if (!m_startRxCallback.IsNull())
     {
-      return m_startRxCallback(packet, startRssW);
+      return m_startRxCallback(nullptr, 0);
     }
     else
     {

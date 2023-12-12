@@ -140,7 +140,7 @@ namespace ns3
       util = m_wirelessUtility.Create<WirelessModuleUtility>();
       if (util == NULL)
       {
-        NS_FATAL_ERROR("Can not create requested wireless utility object:" << m_wirelessUtility.GetTypeId().GetName());
+        NS_LOG_UNCOND("Can not create requested wireless utility object:" << m_wirelessUtility.GetTypeId().GetName());
         return NULL;
       }
       // setup
@@ -152,7 +152,7 @@ namespace ns3
     }
     else
     {
-      NS_FATAL_ERROR("WirelessModuleUtilityHelper:Utility already installed!");
+      NS_LOG_UNCOND("WirelessModuleUtilityHelper:Utility already installed!");
       return NULL;
     }
 

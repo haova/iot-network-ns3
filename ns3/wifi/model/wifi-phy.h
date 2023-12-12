@@ -25,6 +25,7 @@
 #include "wifi-phy-operating-channel.h"
 #include "wifi-phy-state-helper.h"
 #include "wifi-standards.h"
+#include "wireless-module-utility.h"
 
 #include "ns3/error-model.h"
 
@@ -1189,6 +1190,7 @@ namespace ns3
         uint32_t GetSubcarrierSpacing() const;
 
         // @iotnet
+        void InitDriver(void);
         bool DriverStartRx(/*Ptr<Packet> packet, double startRssW*/);
         // @end_iotnet
 
@@ -1526,6 +1528,12 @@ namespace ns3
         Time m_timeLastPreambleDetected;                      //!< Record the time the last preamble was detected
 
         Callback<void> m_capabilitiesChangedCallback; //!< Callback when PHY capabilities changed
+
+        // @iotnet
+        Ptr<Node> m_node;
+        bool m_isDriverInitialized;
+        Ptr<WirelessModuleUtility> m_utility;
+        // @end_iotnet
     };
 
     /**

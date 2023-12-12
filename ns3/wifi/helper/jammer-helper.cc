@@ -24,140 +24,141 @@
 #include "ns3/config.h"
 #include "ns3/names.h"
 
-NS_LOG_COMPONENT_DEFINE ("JammerHelper");
+NS_LOG_COMPONENT_DEFINE("JammerHelper");
 
-namespace ns3 {
-
-JammerHelper::JammerHelper ()
+namespace ns3
 {
-  m_jammer.SetTypeId ("ns3::ConstantJammer");
-}
 
-JammerHelper::~JammerHelper ()
-{
-}
+  JammerHelper::JammerHelper()
+  {
+    m_jammer.SetTypeId("ns3::ConstantJammer");
+  }
 
-void
-JammerHelper::SetJammerType (std::string type)
-{
-  NS_LOG_FUNCTION (this);
-  m_jammer.SetTypeId (type);
-}
+  JammerHelper::~JammerHelper()
+  {
+  }
 
-std::string
-JammerHelper::GetJammerType (void) const
-{
-  NS_LOG_FUNCTION (this);
-  return m_jammer.GetTypeId ().GetName ();
-}
+  void
+  JammerHelper::SetJammerType(std::string type)
+  {
+    NS_LOG_FUNCTION(this);
+    m_jammer.SetTypeId(type);
+  }
 
-void
-JammerHelper::Set (std::string name, const AttributeValue &v)
-{
-  NS_LOG_FUNCTION (this);
-  m_jammer.Set (name, v);
-}
+  std::string
+  JammerHelper::GetJammerType(void) const
+  {
+    NS_LOG_FUNCTION(this);
+    return m_jammer.GetTypeId().GetName();
+  }
 
-JammerContainer
-JammerHelper::Install (Ptr<Node> node) const
-{
-  NS_LOG_FUNCTION (this << node);
-  return Install (NodeContainer (node));
-}
+  void
+  JammerHelper::Set(std::string name, const AttributeValue &v)
+  {
+    NS_LOG_FUNCTION(this);
+    m_jammer.Set(name, v);
+  }
 
-JammerContainer
-JammerHelper::Install (NodeContainer c) const
-{
-  NS_LOG_DEBUG (this);
-  JammerContainer container;
-  for (NodeContainer::Iterator i = c.Begin (); i != c.End (); ++i)
+  JammerContainer
+  JammerHelper::Install(Ptr<Node> node) const
+  {
+    NS_LOG_FUNCTION(this << node);
+    return Install(NodeContainer(node));
+  }
+
+  JammerContainer
+  JammerHelper::Install(NodeContainer c) const
+  {
+    NS_LOG_DEBUG(this);
+    JammerContainer container;
+    for (NodeContainer::Iterator i = c.Begin(); i != c.End(); ++i)
     {
-      Ptr<Jammer> jammer = DoInstall (*i);
-      container.Add (jammer);
+      Ptr<Jammer> jammer = DoInstall(*i);
+      container.Add(jammer);
     }
-  return container;
-}
+    return container;
+  }
 
-JammerContainer
-JammerHelper::Install (std::string nodeName) const
-{
-  NS_LOG_DEBUG (this);
-  Ptr<Node> node = Names::Find<Node> (nodeName);
-  return Install (node);
-}
+  JammerContainer
+  JammerHelper::Install(std::string nodeName) const
+  {
+    NS_LOG_DEBUG(this);
+    Ptr<Node> node = Names::Find<Node>(nodeName);
+    return Install(node);
+  }
 
-void
-JammerHelper::EnableLogComponents (void)
-{
-  LogComponentEnable ("Jammer", LOG_LEVEL_ALL);
-  LogComponentEnable ("ReactiveJammer", LOG_LEVEL_ALL);
-  LogComponentEnable ("RandomJammer", LOG_LEVEL_ALL);
-  LogComponentEnable ("ConstantJammer", LOG_LEVEL_ALL);
-  LogComponentEnable ("EavesdropperJammer", LOG_LEVEL_ALL);
-}
+  void
+  JammerHelper::EnableLogComponents(void)
+  {
+    LogComponentEnable("Jammer", LOG_LEVEL_ALL);
+    LogComponentEnable("ReactiveJammer", LOG_LEVEL_ALL);
+    LogComponentEnable("RandomJammer", LOG_LEVEL_ALL);
+    LogComponentEnable("ConstantJammer", LOG_LEVEL_ALL);
+    LogComponentEnable("EavesdropperJammer", LOG_LEVEL_ALL);
+  }
 
-/*
- * Private functions start here.
- */
-Ptr<Jammer>
-JammerHelper::DoInstall (Ptr<Node> node) const
-{
-  NS_LOG_FUNCTION (this << node);
-  NS_LOG_DEBUG ("JammerHelper:Installing jammer onto node #" << node->GetId ());
+  /*
+   * Private functions start here.
+   */
+  Ptr<Jammer>
+  JammerHelper::DoInstall(Ptr<Node> node) const
+  {
+    NS_LOG_FUNCTION(this << node);
+    NS_LOG_UNCOND("JammerHelper:Installing jammer onto node #" << node->GetId());
 
-  // create jammer object
-  Ptr<Jammer> jammer = m_jammer.Create<Jammer> ();
-  if (jammer == NULL)
+    // create jammer object
+    Ptr<Jammer> jammer = m_jammer.Create<Jammer>();
+    if (jammer == NULL)
     {
-      NS_FATAL_ERROR ("Can not create requested jammer object:" <<
-                      m_jammer.GetTypeId ().GetName ());
+      NS_FATAL_ERROR("Can not create requested jammer object:" << m_jammer.GetTypeId().GetName());
       return NULL;
     }
 
-  // set jammer ID to be the same as node ID
-  jammer->SetId (node->GetId ());
+    // set jammer ID to be the same as node ID
+    jammer->SetId(node->GetId());
 
-  // check if utility already exists
-  Ptr<WirelessModuleUtility> util = node->GetObject<WirelessModuleUtility> ();
-  if (util == NULL)
+    // check if utility already exists
+    Ptr<WirelessModuleUtility> util = node->GetObject<WirelessModuleUtility>();
+    if (util == NULL)
     {
-      NS_LOG_DEBUG ("JammerHelper:WirelessModuleUtility doesn't exist, creating!");
+      NS_LOG_DEBUG("JammerHelper:WirelessModuleUtility doesn't exist, creating!");
       // utility doesn't exist, install one.
       WirelessModuleUtilityHelper utilHelper;
-      utilHelper.Install (node);
+      utilHelper.Install(node);
       // get pointer to utility
-      util = node->GetObject<WirelessModuleUtility> ();
+      util = node->GetObject<WirelessModuleUtility>();
     }
-  else
+    else
     {
-      NS_LOG_DEBUG ("JammerHelper:WirelessModuleUtility already installed!");
+      NS_LOG_DEBUG("JammerHelper:WirelessModuleUtility already installed!");
     }
-  // set utility
-  jammer->SetUtility (util);
-  // set callbacks
-  util->SetEndRxCallback (MakeCallback(&ns3::Jammer::EndRxHandler, jammer));
-  util->SetStartRxCallback (MakeCallback (&ns3::Jammer::StartRxHandler, jammer));
-  util->SetEndTxCallback (MakeCallback (&ns3::Jammer::EndTxHandler, jammer));
+    // set utility
+    jammer->SetUtility(util);
+    // set callbacks
+    // util->SetEndRxCallback (MakeCallback(&ns3::Jammer::EndRxHandler, jammer));
+    NS_LOG_UNCOND("Set callback");
+    util->SetStartRxCallback(MakeCallback(&ns3::Jammer::StartRxHandler, jammer));
+    // util->SetEndTxCallback (MakeCallback (&ns3::Jammer::EndTxHandler, jammer));
 
-  // check & set energy source
-  Ptr<EnergySourceContainer> sourceContainer = node->GetObject<EnergySourceContainer> ();
-  if (sourceContainer == NULL)
+    // check & set energy source
+    Ptr<EnergySourceContainer> sourceContainer = node->GetObject<EnergySourceContainer>();
+    if (sourceContainer == NULL)
     {
-      NS_FATAL_ERROR ("JammerHelper:Energy source doesn't exist!");
+      NS_FATAL_ERROR("JammerHelper:Energy source doesn't exist!");
     }
-  else
+    else
     {
       /*
        * XXX Force single energy source when using jammers.
        */
-      NS_ASSERT (sourceContainer->GetN () == 1);
-      jammer->SetEnergySource (sourceContainer->Get (0));
+      NS_ASSERT(sourceContainer->GetN() == 1);
+      jammer->SetEnergySource(sourceContainer->Get(0));
     }
 
-  // aggregate jammer to node
-  node->AggregateObject (jammer);
+    // aggregate jammer to node
+    node->AggregateObject(jammer);
 
-  return jammer;
-}
+    return jammer;
+  }
 
 } // namespace ns3

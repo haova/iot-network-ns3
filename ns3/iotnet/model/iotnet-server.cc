@@ -62,7 +62,7 @@ namespace ns3
             // Assuming the payload is a string, you can convert it to a C++ string
             std::string payload(reinterpret_cast<char *>(buffer), packet->GetSize());
 
-            std::cout << LogPrefix() << "Received " << packet->GetSize() << " bytes. Payload: " << payload << std::endl;
+            // std::cout << LogPrefix() << "Received " << packet->GetSize() << " bytes. Payload: " << payload << std::endl;
 
             // forward to external server
             cpr::Response r = cpr::Post(
