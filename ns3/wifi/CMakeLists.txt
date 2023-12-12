@@ -13,6 +13,9 @@ set(source_files
     helper/wifi-radio-energy-model-helper.cc
     helper/yans-wifi-helper.cc
     helper/wireless-module-utility-helper.cc
+    helper/wireless-module-utility-container.cc
+    helper/jammer-helper.cc
+    helper/jammer-container.cc
     model/adhoc-wifi-mac.cc
     model/ampdu-subframe-header.cc
     model/ampdu-tag.cc
@@ -156,7 +159,8 @@ set(source_files
     model/yans-wifi-channel.cc
     model/yans-wifi-phy.cc
     model/wireless-module-utility.cc
-    helper/wireless-module-utility-container.cc
+    model/jammer.cc
+    model/constant-jammer.cc
 )
 
 set(header_files
@@ -167,6 +171,9 @@ set(header_files
     helper/wifi-radio-energy-model-helper.h
     helper/yans-wifi-helper.h
     helper/wireless-module-utility-helper.h
+    helper/wireless-module-utility-container.h
+    helper/jammer-helper.h
+    helper/jammer-container.h
     model/adhoc-wifi-mac.h
     model/ampdu-subframe-header.h
     model/ampdu-tag.h
@@ -318,7 +325,8 @@ set(header_files
     model/yans-wifi-channel.h
     model/yans-wifi-phy.h
     model/wireless-module-utility.h
-    helper/wireless-module-utility-container.h
+    model/jammer.h
+    model/constant-jammer.h
 )
 
 build_lib(

@@ -508,6 +508,7 @@ namespace ns3
             NS_ASSERT(!m_wifiPhy->m_currentEvent);
 
             // @iotnet
+            // std::cout << ppdu->GetTxVector() << std::endl;
             if (!m_wifiPhy->DriverStartRx(/*packet, MeasureRss()*/))
             {
                 // NS_LOG_DEBUG("NslWifiPhy:Ignoring RX! at Node #" << m_node->GetId());

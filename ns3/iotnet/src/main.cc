@@ -10,6 +10,8 @@
 #include "ns3/ssid.h"
 #include "ns3/wifi-module.h"
 #include "ns3/yans-wifi-helper.h"
+#include "ns3/energy-module.h"
+#include "ns3/jammer-helper.h"
 
 using namespace ns3;
 
@@ -42,6 +44,15 @@ createSensorNodes(int n)
 NetDeviceContainer
 setupWifi(NodeContainer sensorNodes, NodeContainer apNode)
 {
+    // nodes
+    int jammerIndex = sensorNodes.GetN() - 1;
+    NodeContainer honestNodes;
+    for (int i = 0; i < jammerIndex; i++)
+        honestNodes.Add(sensorNodes.Get(i));
+
+    NodeContainer jammerNodes;
+    jammerNodes.Add(sensorNodes.Get(jammerIndex));
+
     // wifi phy and mac
     YansWifiChannelHelper channel = YansWifiChannelHelper::Default();
     YansWifiPhyHelper phy;
@@ -54,8 +65,10 @@ setupWifi(NodeContainer sensorNodes, NodeContainer apNode)
 
     // wireless devices
     NetDeviceContainer staDevices;
+    NetDeviceContainer jammerNetdevice;
     mac.SetType("ns3::StaWifiMac", "Ssid", SsidValue(ssid), "ActiveProbing", BooleanValue(false));
-    staDevices = wifi.Install(phy, mac, sensorNodes);
+    staDevices = wifi.Install(phy, mac, honestNodes);
+    jammerNetdevice = wifi.Install(phy, mac, jammerNodes);
 
     NetDeviceContainer apDevices;
     mac.SetType("ns3::ApWifiMac", "Ssid", SsidValue(ssid));
@@ -105,6 +118,21 @@ setupWifi(NodeContainer sensorNodes, NodeContainer apNode)
     utilityPtr->TraceConnectWithoutContext("Pdr", MakeCallback(&NodePdr));
     utilityPtr->TraceConnectWithoutContext("ThroughputRx", MakeCallback(&NodeThroughputRx));
 
+    // energy model
+    BasicEnergySourceHelper basicSourceHelper;
+    basicSourceHelper.Set("BasicEnergySourceInitialEnergyJ", DoubleValue(0.1));
+    EnergySourceContainer energySources = basicSourceHelper.Install(sensorNodes);
+    WifiRadioEnergyModelHelper radioEnergyHelper;
+    radioEnergyHelper.Set("TxCurrentA", DoubleValue(0.0174));
+    DeviceEnergyModelContainer deviceModels =
+        radioEnergyHelper.Install(staDevices, energySources);
+    DeviceEnergyModelContainer jammerDeviceModels =
+        radioEnergyHelper.Install(jammerNetdevice.Get(0), energySources.Get(jammerIndex));
+
+    // jammer
+    JammerHelper jammerHelper;
+    JammerContainer jammers = jammerHelper.Install(jammerNodes);
+
     // pcap
     phy.SetPcapDataLinkType(WifiPhyHelper::DLT_IEEE802_11_RADIO);
     phy.EnablePcap("output/iotnet", apDevices.Get(0));
@@ -131,7 +159,7 @@ int main(int argc, char *argv[])
     p2pNodes.Create(2);
 
     // create wifi sensor nodes (n2)
-    NodeContainer wifiStaNodes = createSensorNodes(1);
+    NodeContainer wifiStaNodes = createSensorNodes(2);
 
     // get AP node (n0)
     NodeContainer wifiApNode = p2pNodes.Get(0);
