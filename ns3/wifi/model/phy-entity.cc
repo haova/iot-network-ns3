@@ -507,14 +507,14 @@ namespace ns3
         case WifiPhyState::IDLE:
             NS_ASSERT(!m_wifiPhy->m_currentEvent);
 
-            // @modify
+            // @iotnet
             if (!m_wifiPhy->DriverStartRx(/*packet, MeasureRss()*/))
             {
                 // NS_LOG_DEBUG("NslWifiPhy:Ignoring RX! at Node #" << m_node->GetId());
                 DropPreambleEvent(ppdu, RXING, endRx);
                 return;
             }
-            // @end_modify
+            // @end_iotnet
 
             StartPreambleDetectionPeriod(event);
             break;

@@ -1188,9 +1188,9 @@ namespace ns3
          */
         uint32_t GetSubcarrierSpacing() const;
 
-        // @modify
+        // @iotnet
         bool DriverStartRx(/*Ptr<Packet> packet, double startRssW*/);
-        // @end_modify
+        // @end_iotnet
 
     protected:
         void DoInitialize() override;
