@@ -1,3 +1,4 @@
+/* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
 /*
  * Copyright (c) 2006 INRIA
  *
@@ -19,106 +20,132 @@
 
 #include "ssid.h"
 
-namespace ns3
-{
+namespace ns3 {
 
-Ssid::Ssid()
+Ssid::Ssid ()
 {
-    m_length = 0;
-    for (uint8_t i = 0; i < 33; i++)
+  m_length = 0;
+  for (uint8_t i = 0; i < 33; i++)
     {
-        m_ssid[i] = 0;
+      m_ssid[i] = 0;
     }
 }
 
-Ssid::Ssid(std::string s)
+Ssid::Ssid (std::string s)
 {
-    NS_ASSERT(s.size() < 32);
-    const char* ssid = s.c_str();
-    uint8_t len = 0;
-    while (*ssid != 0 && len < 32)
+  NS_ASSERT (s.size () < 32);
+  const char *ssid = s.c_str ();
+  uint8_t len = 0;
+  while (*ssid != 0 && len < 32)
     {
-        m_ssid[len] = *ssid;
-        ssid++;
-        len++;
+      m_ssid[len] = *ssid;
+      ssid++;
+      len++;
     }
-    NS_ASSERT(len <= 32);
-    m_length = len;
-    while (len < 33)
+  NS_ASSERT (len <= 32);
+  m_length = len;
+  while (len < 33)
     {
-        m_ssid[len] = 0;
-        len++;
+      m_ssid[len] = 0;
+      len++;
     }
-}
-
-void
-Ssid::Print(std::ostream& os) const
-{
-    os << "ssid=" << PeekString();
 }
 
 bool
-Ssid::IsEqual(const Ssid& o) const
+Ssid::IsEqual (const Ssid& o) const
 {
-    uint8_t i = 0;
-    while (i < 32 && m_ssid[i] == o.m_ssid[i] && m_ssid[i] != 0)
+  uint8_t i = 0;
+  while (i < 32
+         && m_ssid[i] == o.m_ssid[i]
+         && m_ssid[i] != 0)
     {
-        i++;
+      i++;
     }
-    return m_ssid[i] == o.m_ssid[i];
+  if (m_ssid[i] != o.m_ssid[i])
+    {
+      return false;
+    }
+  return true;
 }
 
 bool
-Ssid::IsBroadcast() const
+Ssid::IsBroadcast (void) const
 {
-    return m_ssid[0] == 0;
+  if (m_ssid[0] == 0)
+    {
+      return true;
+    }
+  return false;
 }
 
-char*
-Ssid::PeekString() const
+char *
+Ssid::PeekString (void) const
 {
-    // It is safe to return a pointer to the buffer because it is
-    // guaranteed to be zero-terminated.
-    return (char*)m_ssid;
+  //It is safe to return a pointer to the buffer because it is
+  //guaranteed to be zero-terminated.
+  return (char *)m_ssid;
 }
 
 WifiInformationElementId
-Ssid::ElementId() const
+Ssid::ElementId () const
 {
-    return IE_SSID;
+  return IE_SSID;
 }
 
-uint16_t
-Ssid::GetInformationFieldSize() const
+uint8_t
+Ssid::GetInformationFieldSize () const
 {
-    return m_length;
+  return m_length;
 }
 
 void
-Ssid::SerializeInformationField(Buffer::Iterator start) const
+Ssid::SerializeInformationField (Buffer::Iterator start) const
 {
-    NS_ASSERT(m_length <= 32);
-    start.Write(m_ssid, m_length);
+  NS_ASSERT (m_length <= 32);
+  start.Write (m_ssid, m_length);
 }
 
-uint16_t
-Ssid::DeserializeInformationField(Buffer::Iterator start, uint16_t length)
+uint8_t
+Ssid::DeserializeInformationField (Buffer::Iterator start,
+                                   uint8_t length)
 {
-    m_length = length;
-    NS_ASSERT(m_length <= 32);
-    start.Read(m_ssid, m_length);
-    return length;
+  m_length = length;
+  NS_ASSERT (m_length <= 32);
+  start.Read (m_ssid, m_length);
+  return length;
 }
 
-ATTRIBUTE_HELPER_CPP(Ssid);
+ATTRIBUTE_HELPER_CPP (Ssid);
 
-std::istream&
-operator>>(std::istream& is, Ssid& ssid)
+/**
+ * Serialize SSID to the given ostream
+ *
+ * \param os
+ * \param ssid
+ *
+ * \return std::ostream
+ */
+std::ostream &
+operator << (std::ostream &os, const Ssid &ssid)
 {
-    std::string str;
-    is >> str;
-    ssid = Ssid(str);
-    return is;
+  os << ssid.PeekString ();
+  return os;
 }
 
-} // namespace ns3
+/**
+ * Serialize from the given istream to this SSID.
+ *
+ * \param is
+ * \param ssid
+ *
+ * \return std::istream
+ */
+std::istream &operator >> (std::istream &is, Ssid &ssid)
+{
+  std::string str;
+  is >> str;
+  ssid = Ssid (str.c_str ());
+  return is;
+}
+
+} //namespace ns3

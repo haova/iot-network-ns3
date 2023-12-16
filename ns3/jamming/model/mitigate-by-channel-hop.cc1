@@ -1,0 +1,630 @@
+/* -*-  Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil; -*- */
+/*
+ * Copyright (c) 2010 Network Security Lab, University of Washington, Seattle.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation;
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ *
+ * Authors: Sidharth Nabar <snabar@uw.edu>, He Wu <mdzz@u.washington.edu>
+ */
+
+#include "mitigate-by-channel-hop.h"
+#include "ns3/simulator.h"
+#include "ns3/assert.h"
+#include "ns3/log.h"
+#include "ns3/double.h"
+#include "ns3/uinteger.h"
+#include "ns3/string.h"
+#include "ns3/rng-seed-manager.h"
+#include <math.h>
+
+
+NS_LOG_COMPONENT_DEFINE ("MitigateByChannelHop");
+
+namespace ns3 {
+
+NS_OBJECT_ENSURE_REGISTERED (MitigateByChannelHop);
+
+TypeId
+MitigateByChannelHop::GetTypeId (void)
+{
+  static TypeId tid = TypeId ("ns3::MitigateByChannelHop")
+      .SetParent<JammingMitigation> ()
+      .AddConstructor<MitigateByChannelHop> ()
+      .AddAttribute ("MitigateByChannelHopDetectionMethod",
+                     "Jamming detection method to use.",
+                     UintegerValue (1), // default to RSS only
+                     MakeUintegerAccessor (&MitigateByChannelHop::SetJammingDetectionMethod,
+                                           &MitigateByChannelHop::GetJammingDetectionMethod),
+                     MakeUintegerChecker<uint32_t> ())
+      .AddAttribute ("MitigateByChannelHopDetectionThreshold",
+                     "Jamming detection threshold.",
+                     DoubleValue (0.5), // default to 0.5
+                     MakeDoubleAccessor (&MitigateByChannelHop::SetJammingDetectionThreshold,
+                                         &MitigateByChannelHop::GetJammingDetectionThreshold),
+                     MakeDoubleChecker<double> ())
+      .AddAttribute ("MitigateByChannelHopTxPower",
+                     "TX power for channel hop message.",
+                     DoubleValue (0.001), // 0.001 W = 0 dBm
+                     MakeDoubleAccessor (&MitigateByChannelHop::SetTxPower,
+                                         &MitigateByChannelHop::GetTxPower),
+                     MakeDoubleChecker<double> ())
+      .AddAttribute ("MitigateByChannelHopChannelHopMessage",
+                     "Content of channel hop message.",
+                     StringValue ("Channel Hop!"),
+                     MakeStringAccessor (&MitigateByChannelHop::SetChannelHopMessage,
+                                         &MitigateByChannelHop::GetChannelHopMessage),
+                     MakeStringChecker ())
+      .AddAttribute ("MitigateByChannelHopChannelHopDelay",
+                     "Channel hop delay.",
+                     TimeValue (Seconds (0.0)),
+                     MakeTimeAccessor (&MitigateByChannelHop::SetChannelHopDelay,
+                                       &MitigateByChannelHop::GetChannelHopDelay),
+                     MakeTimeChecker ())
+      .AddAttribute ("MitigateByChannelHopChannelHopSeed",
+                     "Seed used in internal RNG.",
+                     UintegerValue (12345), // same default defined in rng-stream.h
+                     MakeUintegerAccessor (&MitigateByChannelHop::SetRngSeed,
+                                           &MitigateByChannelHop::GetRngSeed),
+                     MakeUintegerChecker<uint32_t> ())
+      .AddAttribute ("MitigateByChannelHopChannelStart",
+                     "Starting channel number.",
+                     UintegerValue (1),   // first available wifi channel number
+                     MakeUintegerAccessor (&MitigateByChannelHop::SetStartChannelNumber,
+                                           &MitigateByChannelHop::GetStartChannelNumber),
+                     MakeUintegerChecker<uint16_t> ())
+      .AddAttribute ("MitigateByChannelHopChannelEnd",
+                     "Ending channel number.",
+                     UintegerValue (11),  // last available wifi channel number
+                     MakeUintegerAccessor (&MitigateByChannelHop::SetEndChannelNumber,
+                                           &MitigateByChannelHop::GetEndChannelNumber),
+                     MakeUintegerChecker<uint16_t> ())
+  ;
+  return tid;
+}
+
+MitigateByChannelHop::MitigateByChannelHop ()
+  :  m_rngInitialized (false),
+     m_waitingToHop (false)
+{
+   uint64_t nextStream = RngSeedManager::GetNextStreamIndex ();
+   NS_ASSERT(nextStream <= ((1ULL)<<63));
+   m_stream = new RngStream (RngSeedManager::GetSeed (),
+                                nextStream,
+                                RngSeedManager::GetRun ());
+  
+  
+}
+
+MitigateByChannelHop::~MitigateByChannelHop ()
+{
+}
+
+void
+MitigateByChannelHop::SetUtility (Ptr<WirelessModuleUtility> utility)
+{
+  NS_LOG_FUNCTION (this << utility);
+  NS_ASSERT (utility != NULL);
+  m_utility = utility;
+}
+
+void
+MitigateByChannelHop::SetEnergySource (Ptr<EnergySource> source)
+{
+  NS_LOG_FUNCTION (this << source);
+  NS_ASSERT (source != NULL);
+  m_source = source;
+}
+
+void
+MitigateByChannelHop::SetJammingDetectionMethod (JammingDetectionMethod method)
+{
+  NS_LOG_FUNCTION (this << method);
+  m_jammingDetectionMethod = method;
+}
+
+uint32_t
+MitigateByChannelHop::GetJammingDetectionMethod (void) const
+{
+  NS_LOG_FUNCTION (this);
+  return m_jammingDetectionMethod;
+}
+
+void
+MitigateByChannelHop::SetJammingDetectionThreshold (double threshold)
+{
+  NS_LOG_FUNCTION (this << threshold);
+  m_jammingDetectionThreshold = threshold;
+}
+
+double
+MitigateByChannelHop::GetJammingDetectionThreshold (void) const
+{
+  NS_LOG_FUNCTION (this);
+  return m_jammingDetectionThreshold;
+}
+
+void
+MitigateByChannelHop::SetTxPower (double txPower)
+{
+  NS_LOG_FUNCTION (this << txPower);
+  m_txPower = txPower;
+}
+
+double
+MitigateByChannelHop::GetTxPower (void) const
+{
+  NS_LOG_FUNCTION (this);
+  return m_txPower;
+}
+
+void
+MitigateByChannelHop::SetChannelHopMessage (std::string message)
+{
+  NS_LOG_FUNCTION (this);
+  m_channelHopMessage = message;
+}
+
+std::string
+MitigateByChannelHop::GetChannelHopMessage (void) const
+{
+  NS_LOG_FUNCTION (this);
+  return m_channelHopMessage;
+}
+
+void
+MitigateByChannelHop::SetChannelHopDelay (Time delay)
+{
+  NS_LOG_FUNCTION (this << delay);
+  m_channelHopDelay = delay;
+}
+
+Time
+MitigateByChannelHop::GetChannelHopDelay (void) const
+{
+  NS_LOG_FUNCTION (this);
+  return m_channelHopDelay;
+}
+
+double
+MitigateByChannelHop::DegreeOfJamming (int method)
+{
+  NS_LOG_FUNCTION (this << method);
+  NS_LOG_DEBUG ("MitigateByChannelHop:At Node #" << GetId () <<
+                ", Calculating degree of jamming!");
+
+  /*
+   * Here we use RSS value at the start of packet as reference for calculating
+   * RSS ratio. This is effective for reactive jammers where the RSS is low at
+   * the beginning of packet, but the average RSS is higher. However this may
+   * not be effective for constant jammers, which results a constantly high RSS
+   * value and a low RSS ratio.
+   */
+  double rssRatio = fabs (m_averageRss - m_startRss) / m_startRss;
+  switch (method)
+    {
+    case PDR_ONLY:
+      NS_LOG_DEBUG ("MitigateByChannelHop:At Node #" << GetId () <<
+                    ", PDR only!");
+      NS_LOG_DEBUG ("PDR" << m_utility->GetPdr ());
+      return (1 - m_utility->GetPdr ());
+    case RSS_ONLY:
+      NS_LOG_DEBUG ("MitigateByChannelHop:At Node #" << GetId () <<
+                    ", RSS only!");
+      return (rssRatio > 1 ? 1 : rssRatio);  // max = 1
+    case PDR_AND_RSS:
+      NS_LOG_DEBUG ("MitigateByChannelHop:At Node #" << GetId () <<
+                    ", PDR & RSS!");
+      // return the average of RSS & PDR
+      return ((rssRatio + (1 - m_utility->GetPdr ())) / 2);
+    default:
+      NS_FATAL_ERROR ("MitigateByChannelHop:At Node #" << GetId () <<
+                      ", Unknown jamming detection method!");
+      break;
+    }
+  return -1.0;  // error
+}
+
+bool
+MitigateByChannelHop::IsJammingDetected (int method)
+{
+  NS_LOG_FUNCTION (this << method);
+  NS_LOG_DEBUG ("MitigateByChannelHop:At Node #" << GetId () <<
+                ", Deciding if jamming is detected!" << m_utility->GetPhyLayerInfo().currentChannel );
+
+  double degreeOfJamming = DegreeOfJamming (method);
+  if (degreeOfJamming > m_jammingDetectionThreshold)
+    {
+      NS_LOG_DEBUG ("MitigateByChannelHop:At Node #" << GetId () <<
+                    ", Jamming is detected!");
+      return true;
+    }
+  else
+    {
+      NS_LOG_DEBUG ("MitigateByChannelHop:At Node #" << GetId () <<
+                    ", Jamming is NOT detected!");
+      return false;
+    }
+}
+
+void
+MitigateByChannelHop::SendChannelHopMessage(void)
+{
+  NS_LOG_FUNCTION (this);
+  NS_LOG_DEBUG ("MitigateByChannelHop:At Node #" << GetId () <<
+                ", Sending channel hop message >> \n--\n" << m_channelHopMessage <<
+                "\n--");
+
+  // build mitigation packet
+  Ptr<Packet> packet = Create<Packet> ((uint8_t *)m_channelHopMessage.c_str (),
+                                       m_channelHopMessage.size ());
+
+  NS_LOG_DEBUG ("MitigateByChannelHop:At Node #" << GetId () <<
+                ", Sending channel hop packet with power = " << m_txPower << " W");
+
+  // send mitigation signal
+  double actualPower = m_utility->SendMitigationMessage (packet, m_txPower);
+  if (actualPower != 0.0)
+    {
+      NS_LOG_DEBUG ("MitigateByChannelHop:At Node #" << GetId () <<
+                    ", Channel hop packet sent with power = " << actualPower << " W");
+    }
+  else
+    {
+      NS_LOG_ERROR ("MitigateByChannelHop:At Node #" << GetId () <<
+                    ", Failed to send channel hop packet!");
+    }
+
+  m_waitingToHop = true;  // set waiting for channel hop flag
+}
+
+void
+MitigateByChannelHop::HopChannel (void)
+{
+  NS_LOG_FUNCTION (this);
+  NS_ASSERT (m_waitingToHop); // make sure we are waiting to hop channel
+
+  // calculate channel number to hop to
+  uint16_t channelNumber = RandomSequenceGenerator ();
+
+  // calculate channel number to hop to
+  //uint16_t channelNumber = Boucle ();
+
+  // schedule hop channel after sending is complete
+  
+  Simulator::Schedule (Seconds(0.0),
+      &ns3::WirelessModuleUtility::SwitchChannel, m_utility, channelNumber);
+
+  NS_LOG_DEBUG ("MitigateByChannelHop:At Node #" << GetId () << ", Hopping from " <<
+                m_utility->GetPhyLayerInfo().currentChannel << " >-> " <<
+                channelNumber << ", At " << Simulator::Now ().GetSeconds () << "s");
+
+  m_waitingToHop = false; // reset flag after channel hop
+}
+
+void
+MitigateByChannelHop::SetRngSeed (uint32_t seed)
+{
+  NS_LOG_FUNCTION (this << seed);
+  m_seed = seed;
+  // m_stream.SetPackageSeed (seed);
+  // m_stream.InitializeStream ();
+}
+
+uint32_t
+MitigateByChannelHop::GetRngSeed (void) const
+{
+  NS_LOG_FUNCTION (this);
+  return m_seed;
+}
+
+void
+MitigateByChannelHop::SetStartChannelNumber (uint16_t channelNumber)
+{
+  NS_LOG_FUNCTION (this << channelNumber);
+  m_channelStart = channelNumber;
+}
+
+uint16_t
+MitigateByChannelHop::GetStartChannelNumber (void) const
+{
+  NS_LOG_FUNCTION (this);
+  return m_channelStart;
+}
+
+void
+MitigateByChannelHop::SetEndChannelNumber (uint16_t channelNumber)
+{
+  NS_LOG_FUNCTION (this);
+  m_channelEnd = channelNumber;
+}
+
+uint16_t
+MitigateByChannelHop::GetEndChannelNumber (void) const
+{
+  NS_LOG_FUNCTION (this);
+  return m_channelEnd;
+}
+
+/*
+ * Private functions start here.
+ */
+
+void
+MitigateByChannelHop::DoStart (void)
+{
+  NS_LOG_FUNCTION (this);
+  StartMitigation (); // start mitigation at beginning of simulation
+  
+}
+
+void
+MitigateByChannelHop::DoDispose (void)
+{
+  NS_LOG_FUNCTION (this);
+  NS_LOG_DEBUG ("MitigateByChannelHop: At node #" << GetId () <<
+                " Current channel number = " <<
+                m_utility->GetPhyLayerInfo ().currentChannel);
+  StopMitigation ();
+}
+
+void
+MitigateByChannelHop::DoMitigation (void)
+{
+  NS_LOG_FUNCTION (this);
+  NS_LOG_DEBUG ("MitigateByChannelHop:At Node #" << GetId () <<
+                ", Mitigation started!");
+ // m_utility->SwitchChannel(2);
+  NS_LOG_DEBUG (m_utility->GetPhyLayerInfo ().currentChannel);
+ /* Ptr<Packet> packet;
+ 
+      NS_LOG_DEBUG ("MitigateByChannelHop:At Node #" << GetId () <<
+                    ", schedule hop at end of TX!");
+      // schedule channel hop after some time
+      NS_LOG_DEBUG (m_channelHopDelay);
+
+      Time delay = m_utility->GetPhyLayerInfo().channelSwitchDelay;
+    /// Simulator::Schedule(Seconds(0.060),&MitigateByChannelHop::StartDetection,this,packet,0);
+
+     if(m_waitingToHop){
+       HopChannel();
+     }
+
+     NS_LOG_DEBUG ("Schedule"<< Simulator::Now ().GetSeconds () );*/
+      
+                        
+      
+}
+
+void
+MitigateByChannelHop::DoStopMitigation (void)
+{
+  NS_LOG_FUNCTION (this);
+  NS_LOG_DEBUG ("MitigateByChannelHop:At Node #" << GetId () <<
+                ", Mitigation stopped!");
+}
+
+void
+MitigateByChannelHop::DoStartRxHandler (Ptr<Packet> packet, double startRss)
+{
+  NS_LOG_FUNCTION (this << packet << startRss);
+  m_startRss = startRss;
+}
+
+void
+MitigateByChannelHop::DoEndRxHandler (Ptr<Packet> packet, double averageRss)
+{
+  NS_LOG_FUNCTION (this << packet << averageRss);
+  NS_LOG_DEBUG ("MitigateByChannelHop:At Node #" << GetId () <<
+                ", Handling incoming packet!");
+
+  if (!IsMitigationOn ())
+    {
+      NS_LOG_DEBUG ("MitigateByChannelHop:At Node #" << GetId () <<
+                    ", Mitigation is OFF!");
+      return;
+    }
+
+  m_averageRss = averageRss;
+
+  // detect jamming
+  if (IsJammingDetected (m_jammingDetectionMethod))
+    {
+      NS_LOG_DEBUG ("MitigateByChannelHop:At Node #" << GetId () <<
+                    ", Sending channel hop message at " <<
+                    Simulator::Now ().GetSeconds () << "s");
+      SendChannelHopMessage ();
+    }
+
+  if (packet == NULL)
+    {
+      NS_LOG_DEBUG ("MitigateByChannelHop:At Node #" << GetId () <<
+                    ", Failed to receive current packet!");
+      return;
+    }
+
+  // check if incoming packet is channel hop message
+  if (FindMessage (packet, m_channelHopMessage))
+    {
+      if (!m_waitingToHop)  // hop only if current node is not waiting to hop
+        {
+          NS_LOG_DEBUG ("MitigateByChannelHop:At Node #" << GetId () <<
+                        ", Received channel hop message at " <<
+                        Simulator::Now ().GetSeconds ());
+          /*
+           * Pass channel hop message, hopping to next channel is done at the
+           * end of sending channel hopping message.
+           */
+          NS_LOG_DEBUG ("MitigateByChannelHop:At Node #" << GetId () <<
+                        ", Passing channel hop message!");
+          SendChannelHopMessage ();
+        }
+      else
+        {
+          NS_LOG_DEBUG ("MitigateByChannelHop:At Node #" << GetId () <<
+                        ", Received channel hop message!" <<
+                        " But not hopping because current node is waiting to hop!");
+        }
+    }
+}
+
+void 
+MitigateByChannelHop::StartDetection(Ptr<Packet> packet, double averageRss){
+  NS_LOG_DEBUG ("test start detcetion");
+  if (!IsMitigationOn ())
+    {
+      NS_LOG_DEBUG ("MitigateByChannelHop:At Node #" << GetId () <<
+                    ", Mitigation is OFF!");
+      return;
+    }
+     if (IsJammingDetected (m_jammingDetectionMethod))
+    {
+      NS_LOG_DEBUG ("MitigateByChannelHop:At Node #" << GetId () <<
+                    ", Sending channel hop message at " <<
+                    Simulator::Now ().GetSeconds () << "s");
+      SendChannelHopMessage ();
+    }
+
+  if (packet == NULL)
+    {
+      NS_LOG_DEBUG ("MitigateByChannelHop:At Node #" << GetId () <<
+                    ", Failed to receive current packet!");
+      return;
+    }
+
+  // check if incoming packet is channel hop message
+  if (FindMessage (packet, m_channelHopMessage))
+    {
+      if (!m_waitingToHop)  // hop only if current node is not waiting to hop
+        {
+          NS_LOG_DEBUG ("MitigateByChannelHop:At Node #" << GetId () <<
+                        ", Received channel hop message at " <<
+                        Simulator::Now ().GetSeconds ());
+          /*
+           * Pass channel hop message, hopping to next channel is done at the
+           * end of sending channel hopping message.
+           */
+          NS_LOG_DEBUG ("MitigateByChannelHop:At Node #" << GetId () <<
+                        ", Passing channel hop message!");
+          SendChannelHopMessage ();
+        }
+      else
+        {
+          NS_LOG_DEBUG ("MitigateByChannelHop:At Node #" << GetId () <<
+                        ", Received channel hop message!" <<
+                        " But not hopping because current node is waiting to hop!");
+        }
+    }
+  
+}
+
+
+void
+MitigateByChannelHop::DoEndTxHandler (Ptr<Packet> packet, double txPower)
+{
+  NS_LOG_FUNCTION (this << packet << txPower);
+
+  if (m_waitingToHop) // check waiting for channel hop flag
+    {
+      NS_LOG_DEBUG ("MitigateByChannelHop:At Node #" << GetId () <<
+                    ", schedule hop at end of TX!");
+      // schedule channel hop after some time
+      NS_LOG_DEBUG (m_channelHopDelay);
+      Time delay = m_utility->GetPhyLayerInfo().channelSwitchDelay;
+      Ptr<Packet> packet;
+      Simulator::Schedule (Seconds(0.5), &MitigateByChannelHop::StartDetection,this,packet,0.0);
+      HopChannel();
+     //Simulator::Schedule(Seconds(0.001),&MitigateByChannelHop::DoEndRxHandler,this,packet,0);
+      
+                        
+    }
+  else
+    {
+      NS_LOG_DEBUG ("MitigateByChannelHop:At Node #" << GetId () <<
+                    ", Not doing anything at end of TX!");
+    }
+}
+
+
+bool
+MitigateByChannelHop::FindMessage (Ptr<const Packet> packet, std::string target) const
+{
+  NS_LOG_FUNCTION (this << packet);
+  NS_ASSERT (packet != NULL);
+
+  if (packet->GetSize () != target.size ()) // check size of packet first
+    {
+      NS_LOG_DEBUG ("MitigateByChannelHop:At Node #" << GetId () <<
+                    ", Size incorrect, not checking data!");
+       NS_LOG_DEBUG ("ti,e" << Simulator::Now().GetSeconds());
+      return false;
+    }
+
+  // copy data from packet
+  uint8_t data[packet->GetSize()];
+  packet->CopyData (data, packet->GetSize ());
+
+  // convert data to string
+  std::string dataString;
+  dataString.assign ((char*)data, packet->GetSize ());
+
+  // show packet content
+  NS_LOG_DEBUG ("MitigateByChannelHop:At Node #" << GetId () <<
+                ", Packet size = " << packet->GetSize () << " content is:\n---\n" <<
+                dataString << "\n---");
+
+  return (dataString.compare (target) == 0);  // check if is channel hop message
+}
+
+uint16_t
+MitigateByChannelHop::RandomSequenceGenerator (void)
+{
+  NS_LOG_FUNCTION (this);
+  /*double nb_aletoire = m_stream->RandU01();
+  NS_LOG_FUNCTION (this<<nb_aletoire);
+  NS_LOG_FUNCTION (this<<m_channelStart);
+ NS_LOG_FUNCTION (this<<m_channelEnd);
+  uint32_t nb_channel = (m_channelStart - m_channelEnd) + 1 ;
+  NS_LOG_FUNCTION (this<<nb_channel);
+  double nb_divisible = 1/nb_channel;
+  NS_LOG_FUNCTION (this<<nb_divisible);
+  double res = nb_aletoire / nb_divisible;
+  NS_LOG_FUNCTION (this<<res);
+  uint32_t arrondi = floor(res);
+  NS_LOG_FUNCTION (this<<arrondi);
+  uint16_t channelNumber = arrondi + m_channelStart;*/
+  //uint16_t channelNumber = m_stream->GetInteger (m_channelStart, m_channelEnd);
+  uint16_t channelNumber =rand()%( m_channelEnd-m_channelStart ) + m_channelStart;
+  NS_LOG_DEBUG ("MitigateByChannelHop:At Node #" << GetId () << ", RNG returned " <<
+                channelNumber);
+
+
+  return channelNumber;
+}
+
+
+
+
+uint16_t
+MitigateByChannelHop::Boucle (void){
+ uint16_t currentChannel = m_utility->GetPhyLayerInfo ().currentChannel;
+ uint16_t nextChannel = currentChannel + 1;
+  if (nextChannel >= m_channelEnd)
+    {
+      nextChannel = 2;  // wrap around and start form 1
+    }
+  return nextChannel;
+}
+
+
+} // namespace ns3

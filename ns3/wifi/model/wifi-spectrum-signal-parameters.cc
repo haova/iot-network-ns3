@@ -1,3 +1,4 @@
+/* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
 /*
  * Copyright (c) 2011 CTTC
  *
@@ -18,43 +19,39 @@
  * Modified by Marco Miozzo <mmiozzo@cttc.es> (add data and ctrl diversity)
  */
 
+#include "ns3/log.h"
+#include "ns3/packet.h"
 #include "wifi-spectrum-signal-parameters.h"
 
-#include "wifi-ppdu.h"
+namespace ns3 {
 
-#include "ns3/log.h"
+NS_LOG_COMPONENT_DEFINE ("WifiSpectrumSignalParameters");
 
-namespace ns3
+WifiSpectrumSignalParameters::WifiSpectrumSignalParameters ()
 {
-
-NS_LOG_COMPONENT_DEFINE("WifiSpectrumSignalParameters");
-
-WifiSpectrumSignalParameters::WifiSpectrumSignalParameters()
-    : SpectrumSignalParameters(),
-      ppdu(nullptr)
-{
-    NS_LOG_FUNCTION(this);
+  NS_LOG_FUNCTION (this);
 }
 
-WifiSpectrumSignalParameters::WifiSpectrumSignalParameters(const WifiSpectrumSignalParameters& p)
-    : SpectrumSignalParameters(p),
-      ppdu(p.ppdu)
+WifiSpectrumSignalParameters::WifiSpectrumSignalParameters (const WifiSpectrumSignalParameters& p)
+  : SpectrumSignalParameters (p)
 {
-    NS_LOG_FUNCTION(this << &p);
+  NS_LOG_FUNCTION (this << &p);
+  packet = p.packet;
 }
 
 Ptr<SpectrumSignalParameters>
-WifiSpectrumSignalParameters::Copy() const
+WifiSpectrumSignalParameters::Copy ()
 {
-    NS_LOG_FUNCTION(this);
-    // Ideally we would use:
-    //   return Copy<WifiSpectrumSignalParameters> (*this);
-    // but for some reason it doesn't work. Another alternative is
-    //   return Copy<WifiSpectrumSignalParameters> (this);
-    // but it causes a double creation of the object, hence it is less efficient.
-    // The solution below is copied from the implementation of Copy<> (Ptr<>) in ptr.h
-    Ptr<WifiSpectrumSignalParameters> wssp(new WifiSpectrumSignalParameters(*this), false);
-    return wssp;
+  NS_LOG_FUNCTION (this);
+  // Ideally we would use:
+  //   return Copy<WifiSpectrumSignalParameters> (*this);
+  // but for some reason it doesn't work. Another alternative is
+  //   return Copy<WifiSpectrumSignalParameters> (this);
+  // but it causes a double creation of the object, hence it is less efficient.
+  // The solution below is copied from the implementation of Copy<> (Ptr<>) in ptr.h
+  Ptr<WifiSpectrumSignalParameters> wssp (new WifiSpectrumSignalParameters (*this), false);
+  return wssp;
 }
+
 
 } // namespace ns3

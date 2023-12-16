@@ -1,0 +1,63 @@
+## -*- Mode: python; py-indent-offset: 4; indent-tabs-mode: nil; coding: utf-8; -*-
+
+def build(bld):
+    module = bld.create_ns3_module('jamming', ['wifi', 'network'])
+    module.source = [
+        'model/jammer.cc',
+        'model/random-jammer.cc',
+        'model/constant-jammer.cc',
+        'model/reactive-jammer.cc',
+        'model/eavesdropper-jammer.cc',
+        'model/jamming-mitigation.cc',
+        'model/detection.cc',
+        'model/detection-per.cc',
+        'model/mitigate-by-channel-hop.cc',
+        'model/wireless-module-utility.cc',
+        'model/nsl-wifi-phy.cc',
+        'model/nsl-wifi-channel.cc',
+        'helper/jammer-helper.cc',
+        'helper/jammer-container.cc',
+        'helper/jamming-mitigation-helper.cc',
+        'helper/jamming-mitigation-container.cc',
+        'helper/wireless-module-utility-helper.cc',
+        'helper/wireless-module-utility-container.cc',
+        'helper/nsl-wifi-helper.cc',
+        'helper/detection-helper.cc',
+        'helper/detection-container.cc'
+        ]
+        
+    module_test = bld.create_ns3_module_test_library('jamming')
+    module_test.source = [
+        '',
+        ]
+        
+    headers = bld(features='ns3header')
+    headers.module = 'jamming'
+    headers.source = [
+        'model/jammer.h',
+        'model/random-jammer.h',
+        'model/constant-jammer.h',
+        'model/reactive-jammer.h',
+        'model/eavesdropper-jammer.h',
+        'model/jamming-mitigation.h',
+        'model/mitigate-by-channel-hop.h',
+        'model/detection.h',
+        'model/detection-per.h',
+        'model/wireless-module-utility.h',
+        'model/nsl-wifi-phy.h',
+        'model/nsl-wifi-channel.h',
+        'helper/jammer-helper.h',
+        'helper/jammer-container.h',
+        'helper/jamming-mitigation-helper.h',
+        'helper/jamming-mitigation-container.h',
+        'helper/wireless-module-utility-helper.h',
+        'helper/wireless-module-utility-container.h',
+        'helper/nsl-wifi-helper.h',
+        'helper/detection-helper.h',
+        'helper/detection-container.h',
+        ]
+
+    if (bld.env['ENABLE_EXAMPLES']):
+      bld.recurse('examples')
+      
+    

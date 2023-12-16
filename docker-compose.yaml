@@ -3,9 +3,10 @@ services:
     container_name: iotnet-ns3
     build: ./ns3
     volumes:
-      - ./ns3/iotnet:/root/ns-allinone-3.40/ns-3.40/contrib/iotnet
-      - ./ns3/output:/root/ns-allinone-3.40/ns-3.40/output
-      - ./ns3/wifi:/root/ns-allinone-3.40/ns-3.40/src/wifi
+      - ./ns3/wifi:/root/ns-allinone-3.30.1/ns-3.30.1/src/wifi
+      - ./ns3/jamming:/root/ns-allinone-3.30.1/ns-3.30.1/src/jamming
+      - ./ns3/iotnet:/root/ns-allinone-3.30.1/ns-3.30.1/src/iotnet
+      - ./ns3/output:/root/ns-allinone-3.30.1/ns-3.30.1/output
     links:
       - server-node
   server-node:

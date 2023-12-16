@@ -10,34 +10,23 @@ FIGURES = $(SOURCE)/figures
 
 IMAGES_DIA = \
 	$(FIGURES)/snir.dia \
-	$(FIGURES)/WifiArchitecture.dia \
-	$(FIGURES)/PhyEntityHierarchy.dia \
-	$(FIGURES)/WifiPpduHierarchy.dia \
-	$(FIGURES)/FemHierarchy.dia
+	$(FIGURES)/WifiArchitecture.dia
 
 # specify eps figures from which .png and .pdf figures need to be built
 
 IMAGES_EPS = \
 	$(FIGURES)/snir.eps \
 	$(FIGURES)/WifiArchitecture.eps \
-	$(FIGURES)/PhyEntityHierarchy.eps \
-	$(FIGURES)/WifiPpduHierarchy.eps \
-	$(FIGURES)/FemHierarchy.eps \
-        $(FIGURES)/assoc-manager.eps \
         $(FIGURES)/clear-channel.eps \
         $(FIGURES)/nist-frame-success-rate.eps \
         $(FIGURES)/nist-frame-success-rate-n.eps \
         $(FIGURES)/nist-frame-success-rate-ac.eps \
-        $(FIGURES)/nist-frame-success-rate-ax.eps \
-        $(FIGURES)/wifi-11a-p-1500-adhoc-r-54-min-5-max-50-step-5-throughput.eps \
-        $(FIGURES)/wifi-11g-p-1500-infrastructure-r-6-min-5-max-50-step-5-throughput.eps \
-        $(FIGURES)/default-table-based-error-model-validation.eps \
-        $(FIGURES)/error-models-comparison.eps
+        $(FIGURES)/nist-frame-success-rate-ax.eps
 
 # rescale pdf figures as necessary
 $(FIGURES)/snir.pdf_width = 3in
 
-IMAGES_NOBUILD =
+IMAGES_NOBUILD = 
 # IMAGES_NOBUILD = $(FIGURES)/fading_pedestrian.png \
 
 IMAGES_BUILD = \
@@ -45,7 +34,7 @@ IMAGES_BUILD = \
 	${IMAGES_DIA:.dia=.png} \
 	${IMAGES_DIA:.dia=.pdf} \
 	${IMAGES_EPS:.eps=.png} \
-	${IMAGES_EPS:.eps=.pdf}
+	${IMAGES_EPS:.eps=.pdf} 
 
 
 IMAGES = $(IMAGES_NOBUILD) $(IMAGES_BUILD)
@@ -69,7 +58,7 @@ BUILDDIR      = build
 # Internal variables.
 PAPEROPT_a4     = -D latex_paper_size=a4
 PAPEROPT_letter = -D latex_paper_size=letter
-ALLSPHINXOPTS   = -d $(BUILDDIR)/doctrees $(PAPEROPT_$(PAPER)) $(SPHINXOPTS) $(SOURCE)
+ALLSPHINXOPTS   = -d $(BUILDDIR)/doctrees $(PAPEROPT_$(PAPER)) $(SPHINXOPTS) $(SOURCE) 
 
 .PHONY: help clean html dirhtml singlehtml pickle json htmlhelp qthelp devhelp epub latex latexpdf text man changes linkcheck doctest
 
@@ -104,7 +93,7 @@ frag: pickle
 	pushd $(BUILDDIR)/frag && ../../pickle-to-xml.py ../pickle/index.fpickle  > navigation.xml && popd
 	cp -r $(BUILDDIR)/pickle/_images $(BUILDDIR)/frag
 
-html:  $(IMAGES)
+html:  $(IMAGES) 
 	$(SPHINXBUILD) -b html $(ALLSPHINXOPTS) $(BUILDDIR)/html
 	@echo
 	@echo "Build finished. The HTML pages are in $(BUILDDIR)/html."
