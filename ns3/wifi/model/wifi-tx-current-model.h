@@ -1,3 +1,4 @@
+/* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
 /*
  * Copyright (c) 2014 Universita' degli Studi di Napoli "Federico II"
  *
@@ -22,32 +23,31 @@
 
 #include "ns3/object.h"
 
-namespace ns3
-{
+namespace ns3 {
 
 /**
  * \ingroup energy
  *
- * \brief Model the transmit current as a function of the transmit power and mode
+ * \brief Modelize the transmit current as a function of the transmit power and mode
  *
  */
 class WifiTxCurrentModel : public Object
 {
-  public:
-    /**
-     * \brief Get the type ID.
-     * \return the object TypeId
-     */
-    static TypeId GetTypeId();
+public:
+  /**
+   * \brief Get the type ID.
+   * \return the object TypeId
+   */
+  static TypeId GetTypeId (void);
 
-    WifiTxCurrentModel();
-    ~WifiTxCurrentModel() override;
+  WifiTxCurrentModel ();
+  virtual ~WifiTxCurrentModel ();
 
-    /**
-     * \param txPowerDbm the nominal TX power in dBm
-     * \returns the transmit current (in Ampere)
-     */
-    virtual double CalcTxCurrent(double txPowerDbm) const = 0;
+  /**
+   * \param txPowerDbm the nominal tx power in dBm
+   * \returns the transmit current (in Ampere)
+   */
+  virtual double CalcTxCurrent (double txPowerDbm) const = 0;
 };
 
 /**
@@ -76,29 +76,30 @@ class WifiTxCurrentModel : public Object
  * "On the Effects of Transmit Power Control on the Energy Consumption of WiFi Network Cards",
  * Proceedings of ICST QShine 2009, pp. 463--475
  *
- * If the TX current corresponding to a given nominal transmit power is known, the efficiency
+ * If the tx current corresponding to a given nominal transmit power is known, the efficiency
  * of the power amplifier is given by the above formula:
  * \f$ \eta = \frac{P_{tx}}{(I_{tx}-I_{idle})\cdot V} \f$
  *
  */
 class LinearWifiTxCurrentModel : public WifiTxCurrentModel
 {
-  public:
-    /**
-     * \brief Get the type ID.
-     * \return the object TypeId
-     */
-    static TypeId GetTypeId();
+public:
+  /**
+   * \brief Get the type ID.
+   * \return the object TypeId
+   */
+  static TypeId GetTypeId (void);
 
-    LinearWifiTxCurrentModel();
-    ~LinearWifiTxCurrentModel() override;
+  LinearWifiTxCurrentModel ();
+  virtual ~LinearWifiTxCurrentModel ();
 
-    double CalcTxCurrent(double txPowerDbm) const override;
+  double CalcTxCurrent (double txPowerDbm) const;
 
-  private:
-    double m_eta;         ///< ETA
-    double m_voltage;     ///< voltage in Volts
-    double m_idleCurrent; ///< idle current in Amperes
+
+private:
+  double m_eta; ///< ETA
+  double m_voltage; ///< voltage
+  double m_idleCurrent; ///< idle current
 };
 
 } // namespace ns3

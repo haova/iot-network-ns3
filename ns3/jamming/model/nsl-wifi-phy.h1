@@ -1,0 +1,383 @@
+/* -*-  Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil; -*- */
+/*
+ * Copyright (c) 2005,2006 INRIA
+ * Copyright (c) 2010 Network Security Lab, University of Washington, Seattle.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation;
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ *
+ * Authors: Mathieu Lacage <mathieu.lacage@sophia.inria.fr>
+ *          Sidharth Nabar <snabar@uw.edu>, He Wu <mdzz@u.washington.edu>
+ */
+
+#ifndef NSL_WIFI_PHY_H
+#define NSL_WIFI_PHY_H
+
+#include <stdint.h>
+#include "ns3/callback.h"
+#include "ns3/event-id.h"
+#include "ns3/packet.h"
+#include "ns3/object.h"
+#include "ns3/traced-callback.h"
+#include "ns3/nstime.h"
+#include "ns3/ptr.h"
+#include "ns3/random-variable-stream.h"
+#include "ns3/wifi-radio-energy-model.h"
+#include "ns3/wifi-phy.h"
+#include "ns3/wifi-mode.h"
+#include "ns3/wifi-preamble.h"
+#include "ns3/wifi-phy-standard.h"
+#include "ns3/interference-helper.h"
+#include "wireless-module-utility.h"
+#include "ns3/wifi-phy-state-helper.h"
+#include "ns3/wifi-tx-vector.h"
+
+namespace ns3 {
+
+
+class NslWifiChannel;
+class WifiPhyStateHelper;
+class WifiPpdu;
+
+
+/**
+ * \brief 802.11 PHY layer model
+ *
+ * This PHY extends the Yans wifi PHY implemented previously and described in
+ * "Yet Another Network Simulator", (http://cutebugs.net/files/wns2-yans.pdf).
+ *
+ * This is a duplication of YansWifiPhy with driver interfaces (functions) to
+ * interface with WirelessModuleUtility class.
+ */
+class NslWifiPhy : public WifiPhy {
+public:
+  static TypeId GetTypeId (void);
+  NslWifiPhy ();
+  virtual ~NslWifiPhy ();
+
+  void SetChannel (Ptr<NslWifiChannel> channel);
+  
+
+  void StartTx (Ptr<Packet> packet, WifiTxVector txVector, Time txDuration);
+
+  /**
+   * \brief Driver function invoked at start of TX.
+   *
+   * \param packet Pointer to packet being sent.
+   * \param txPower TX power.
+   *
+   * This function is called at SendPacket, for interfacing with the energy and
+   * utility modules.
+   */
+  void DriverStartTx (Ptr<const Packet> packet, double txPower);
+
+  /**
+   * \brief Set channel number.
+   *
+   * Channel center frequency = Channel starting frequency + 5 MHz * (nch - 1)
+   *
+   * where Starting channel frequency is standard-dependent, see SetStandard()
+   * as defined in IEEE 802.11-2007 17.3.8.3.2.
+   *
+   * NslWifiPhy can switch among different channels. Basically, NslWifiPhy has
+   * a private attribute m_channelNumber that identifies the channel the PHY
+   * operates on. Channel switching cannot interrupt an ongoing transmission.
+   * When PHY is in TX state, the channel switching is postponed until the end
+   * of the current transmission. When the PHY is in SYNC state, the channel
+   * switching causes the drop of the sync packet.
+   */
+  void SetChannelNumber (uint16_t id);
+  /**
+   * Return current channel number, see SetChannelNumber().
+   */
+  uint16_t GetChannelNumber (void) const;
+  /**
+   * Return current center channel frequency in MHz, see SetСhannelNumber()
+   */
+  double GetChannelFrequencyMhz() const;
+
+  Time GetChannelSwitchDelay (void) const;
+
+  //void StartReceivePreamble(Ptr<Packet> packet, double rxPowerW, Time rxDuration);
+
+  void StartReceivePlcp (Ptr<Packet> packet,
+                        double rxPowerDbm,
+                        WifiTxVector txVector,
+                        WifiPreamble preamble,
+                        uint8_t packetType,
+                        Time rxDuration);
+
+  void StartReceivePacket (Ptr<Packet> packet,
+                              WifiTxVector txVector,
+                             WifiPreamble preamble,double rxPowerDbm);
+
+  void SendPacket (Ptr<const Packet> packet, WifiTxVector txMode, WifiPreamble preamble, uint8_t txPowerLevel);
+
+ 
+
+  void SetRxNoiseFigure (double noiseFigureDb);
+  void SetTxPowerStart (double start);
+  void SetTxPowerEnd (double end);
+  void SetNTxPower (uint32_t n);
+  void SetTxGain (double gain);
+  void SetRxGain (double gain);
+  void SetEdThreshold (double threshold);
+  void SetCcaMode1Threshold (double threshold);
+  //void SetErrorRateModel (Ptr<ErrorRateModel> rate);
+  //void SetDevice (Ptr<NetDevice> device);
+  //
+  //void SetMobility (Ptr<Object> mobility);
+  double GetRxNoiseFigure (void) const;
+  double GetTxGain (void) const;
+  double GetRxGain (void) const;
+  double GetEdThreshold (void) const;
+  double GetCcaMode1Threshold (void) const;
+  //Ptr<ErrorRateModel> GetErrorRateModel (void) const;
+  //Ptr<NetDevice> GetDevice (void) const;
+  //Ptr<Object> GetMobility (void);
+
+  virtual double GetTxPowerStart (void) const;
+  virtual  double GetTxPowerEnd (void) const;
+  virtual uint32_t GetNTxPower (void) const;
+  virtual void SetReceiveOkCallback (RxOkCallback callback);
+  virtual void SetReceiveErrorCallback (RxErrorCallback callback);
+  
+  //virtual void RegisterListener (WifiPhyListener *listener);
+  //virtual void UnregisterListerner(WifiPhyListener *listener);
+  virtual void SetSleepMode (void);
+  virtual void ResumeFromSleep (void);
+  /*virtual bool IsStateCcaBusy (void);
+  virtual bool IsStateIdle (void);
+  virtual bool IsStateBusy (void);
+  virtual bool IsStateRx (void);
+  virtual bool IsStateTx (void);
+  virtual bool IsStateSwitching (void);
+  virtual bool IsStateSleep (void);*/
+  //virtual Time GetStateDuration (void);
+  //Time GetStateDuration (void);
+  /*virtual Time GetDelayUntilIdle (void);
+  virtual Time GetLastRxStartTime (void) const;
+  virtual uint8_t GetNModes (void) const;*/
+  //virtual WifiMode GetMode (uint32_t mode) const;
+  virtual double CalculateSnr (WifiTxVector txMode, double ber) const;
+  virtual bool IsModeSupported (WifiMode mode) const;
+  //virtual bool IsMcsSupported (WifiMode mode);
+  virtual Ptr<Channel> GetChannel (void) const;
+ // virtual void ConfigureStandard (enum WifiPhyStandard standard);
+  int64_t AssignStreams (int64_t stream);
+
+  // Driver related public functions.
+  /**
+   * \param node Pointer to the node where PHY is being installed.
+   *
+   * This function sets the pointer to the node where PHY is being installed.
+   */
+  void SetNode (Ptr<Node> node);
+  
+  /**
+   * \returns Current RSS reading at node, in Watts.
+   *
+   * This function measures RSS (in Watts), used as callback in utility module.
+   * It is made public such that other layers can query for current RSS reading
+   * as well.
+   */
+  double MeasureRss (void);
+
+    virtual void SetFrequency (uint32_t freq);
+    virtual uint32_t GetFrequency (void) const;
+    virtual void SetNumberOfTransmitAntennas (uint32_t tx);
+    virtual uint32_t GetNumberOfTransmitAntennas (void) const;
+    virtual void SetNumberOfReceiveAntennas (uint32_t rx) ;
+    virtual uint32_t GetNumberOfReceiveAntennas (void) const;
+    virtual void SetGuardInterval (bool guardInterval);
+    virtual bool GetGuardInterval (void) const;
+    virtual void SetLdpc (bool ldpc);
+    virtual bool GetLdpc (void) const;
+    virtual void SetStbc (bool stbc);
+    virtual bool GetStbc (void) const;
+    virtual void SetGreenfield (bool greenfield);
+    virtual bool GetGreenfield (void) const;
+    virtual bool GetChannelBonding (void) const ;
+    virtual void SetChannelBonding (bool channelbonding) ;
+  
+    virtual uint32_t GetNBssMembershipSelectors (void) const;
+    virtual uint32_t GetBssMembershipSelector (uint32_t selector) const;
+    //virtual WifiModeList GetMembershipSelectorModes(uint32_t selector);
+    virtual uint8_t GetNMcs (void) const;
+    virtual uint8_t GetMcs (uint8_t mcs) const;
+  
+    virtual uint32_t WifiModeToMcs (WifiTxVector mode);
+    //virtual WifiMode McsToWifiMode (uint8_t mcs);
+
+
+
+private:
+  typedef std::vector<WifiMode> Modes;
+
+private:
+  NslWifiPhy (const NslWifiPhy &o);
+  virtual void DoDispose (void);
+  void Configure80211a (void);
+  void Configure80211b (void);
+  void Configure80211_10Mhz (void);
+  void Configure80211_5Mhz ();
+  void ConfigureHolland (void);
+  void Configure80211n(void);
+  void Configure80211p_CCH (void);
+  void Configure80211p_SCH (void);
+  double GetEdThresholdW (void) const;
+  double DbmToW (double dbm) const;
+  double DbToRatio (double db) const;
+  double WToDbm (double w) const;
+  double RatioToDb (double ratio) const;
+  double GetPowerDbm (uint8_t power) const;
+  /**
+   * Overwrites the original function in YansWifiPhy to insert driver
+   */
+  void EndReceive (Ptr<Packet> packet, Ptr<Event> event);
+
+  /*
+   * Driver functions.
+   */
+  void DoStart (void);
+
+  /**
+   * Resets driver. Called at DoDispose.
+   */
+  void ResetDriver (void);
+  /**
+   * Initializes driver. Setting pointers to utility and energy model.
+   */
+  void InitDriver (void);
+
+  
+
+  /**
+   * \brief Driver functions invoked at end of TX, scheduled by DriverStartTx.
+   *
+   * \param packet Pointer to packet being sent.
+   * \param txPower TX power used for transmission.
+   */
+  void DriverEndTx (Ptr<const Packet> packet, double txPower);
+
+  /**
+   * \brief Driver function invoked at start of RX.
+   *
+   * \param packet Pointer to packet being received.
+   * \param startRssW RSS reading at start of the packet, in Watts.
+   * \returns True if the packet is to be received, false if we are to skip the
+   * packet (eg. reactive jammer).
+   */
+  bool DriverStartRx (Ptr<Packet> packet, double startRssW);
+
+  /**
+   * \brief Driver function invoked at end of RX.
+   *
+   * \param packet Pointer to packet received.
+   * \param averageRssW Average RSS for the received packet, in Watts.
+   * \param isSuccessfullyReceived True if packet is successfully received.
+   */
+  void DriverEndRx (Ptr<Packet> packet, double averageRssW,
+                    const bool isSuccessfullyReceived);
+
+  /**
+   * \param mode Current WifiMode being used in channel.
+   *
+   * This function sets the current wifi mode. Called at beginning of every
+   * StartReceivePacket function. It is used to keep a latest copy of WifiMode
+   * being used in by the channel.
+   */
+  void SetCurrentWifiMode (WifiMode mode);
+  
+  /**
+   * \param packet Pointer to packet to be sent.
+   * \param powerW Sending power, in watts.
+   * \param utilitySendMode sending mode set by Utility - enum in Utility
+   * 
+   * This function sends packet at a given power (W). It converts the power to
+   * corresponding power levels internally and calls SendPacket to send. Used
+   * as callback in Utility module.
+   */
+  void UtilitySendPacket (Ptr<Packet> packet, double &powerW, int utilitySendMode);
+
+  /**
+   * This function updates PHY layer information & informs utility.
+   */
+  void UpdatePhyLayerInfo (void);
+
+  /**
+   * \param callback Callback to notify radio energy model of state change.
+   *
+   * This function sets the callback to notify radio energy model when radio
+   * state changes.
+   */
+  //void SetChangeRadioStateCallback (DeviceEnergyModel::ChangeStateCallback callback);
+
+private:
+  virtual void DoInitialize (void);
+  bool     m_initialized;  
+  double   m_edThresholdW;
+  double   m_ccaMode1ThresholdW;
+  double   m_txGainDb;
+  double   m_rxGainDb;
+  double   m_txPowerBaseDbm;
+  double   m_txPowerEndDbm;
+  uint32_t m_nTxPower;
+
+  Ptr<NslWifiChannel> m_channel;
+  uint16_t m_channelNumber;
+  //Ptr<NetDevice> m_device;
+  //Ptr<Object> m_mobility;
+  
+  uint32_t m_numberOfTransmitters;  
+  uint32_t m_numberOfReceivers;     
+  bool     m_ldpc;                  
+  bool     m_stbc;                  
+  bool     m_greenfield;            
+  bool     m_guardInterval;         
+  bool     m_channelBonding;  
+
+  EventId m_endRxEvent;
+ // Ptr<UniformRandomVariable> m_random;
+  /// Standard-dependent center frequency of 0-th channel, MHz
+  double m_channelStartingFrequency;
+  //Ptr<WifiPhyStateHelper> m_state;
+  //InterferenceHelper m_interference;
+  Time m_channelSwitchDelay;
+
+  WifiModeList m_deviceRateSet;
+
+  std::vector<uint32_t> m_bssMembershipSelectorSet;
+  std::vector<uint8_t> m_deviceMcsSet;
+  EventId m_endPlcpRxEvent;
+
+                
+  uint16_t m_mpdusNum;                  
+  bool m_plcpSuccess;
+
+  WifiPreamble m_wifiPreamble;
+
+  /*
+   * Driver variables
+   */
+  bool m_isDriverInitialized; // flag indicating if driver is initialized
+  Ptr<Node> m_node;           // pointer to the node where the PHY is installed
+  Ptr<WirelessModuleUtility> m_utility; // pointer to utility object
+  WifiMode m_currentWifiMode;           // current wifi mode
+  WifiTxVector m_txVector;
+  WirelessModuleUtility::PhyLayerInfo m_phyLayerInfo; // PHY layer info
+};
+
+} // namespace ns3
+
+#endif /* NSL_WIFI_PHY_H */

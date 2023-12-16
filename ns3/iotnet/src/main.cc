@@ -1,228 +1,414 @@
-#include "ns3/applications-module.h"
+/** Implementation of jnetwork with jammer ***/
+
 #include "ns3/core-module.h"
-#include "ns3/csma-module.h"
-#include "ns3/internet-module.h"
-#include "ns3/iotnet-helper.h"
-#include "ns3/mobility-module.h"
-#include "ns3/netanim-module.h"
 #include "ns3/network-module.h"
-#include "ns3/point-to-point-module.h"
-#include "ns3/ssid.h"
+#include "ns3/mobility-module.h"
 #include "ns3/wifi-module.h"
-#include "ns3/yans-wifi-helper.h"
+#include "ns3/internet-module.h"
 #include "ns3/energy-module.h"
-#include "ns3/jammer-helper.h"
+#include "ns3/jamming-module.h"
+#include "ns3/netanim-module.h"
+
+#include <iostream>
+#include <fstream>
+#include <vector>
+#include <string>
+
+NS_LOG_COMPONENT_DEFINE("ReactiveJammerExample");
 
 using namespace ns3;
 
-NS_LOG_COMPONENT_DEFINE("IoTNetworkSimulator");
-
-void NodeRss(double oldValue, double rss)
+/**
+ * \brief Packet receiving sink.
+ *
+ * \param socket Pointer to socket.
+ */
+void ReceivePacket(Ptr<Socket> socket)
 {
-    NS_LOG_UNCOND(Simulator::Now().GetSeconds() << "s Node RSS = " << rss << "W");
+  Ptr<Packet> packet;
+  Address from;
+  while (packet = socket->RecvFrom(from))
+  {
+    if (packet->GetSize() > 0)
+    {
+      InetSocketAddress iaddr = InetSocketAddress::ConvertFrom(from);
+      NS_LOG_UNCOND("--\nReceived one packet! Socket: " << iaddr.GetIpv4()
+                                                        << " port: " << iaddr.GetPort() << " at time = " << Simulator::Now().GetSeconds() << "\n--");
+    }
+  }
 }
 
-void NodePdr(double oldValue, double pdr)
+/**
+ * \brief Traffic generator.
+ *
+ * \param socket Pointer to socket.
+ * \param pktSize Packet size.
+ * \param n Pointer to node.
+ * \param pktCount Number of packets to generate.
+ * \param pktInterval Packet sending interval.
+ */
+static void
+GenerateTraffic(Ptr<Socket> socket, uint32_t pktSize, Ptr<Node> n,
+                uint32_t pktCount, Time pktInterval)
 {
-    NS_LOG_UNCOND(Simulator::Now().GetSeconds() << "s Node PDR = " << pdr);
+  if (pktCount > 0)
+  {
+    socket->Send(Create<Packet>(pktSize));
+    Simulator::Schedule(pktInterval, &GenerateTraffic, socket, pktSize, n,
+                        pktCount - 1, pktInterval);
+  }
+  else
+  {
+    socket->Close();
+  }
 }
 
+/**
+ * \brief Trace function for remaining energy at node.
+ *
+ * \param oldValue Old remaining energy value.
+ * \param remainingEnergy New remaining energy value.
+ */
+void RemainingEnergy(double oldValue, double remainingEnergy)
+{
+  NS_LOG_UNCOND(Simulator::Now().GetSeconds() << "s Current remaining energy = " << remainingEnergy << "J");
+}
+
+/**
+ * \brief Trace function for total energy consumption at node.
+ *
+ * \param oldValue Old total energy consumption value.
+ * \param totalEnergy New total energy consumption value.
+ */
+void TotalEnergy(double oldValue, double totalEnergy)
+{
+  NS_LOG_UNCOND(Simulator::Now().GetSeconds() << "s Total energy consumed by radio = " << totalEnergy << "J");
+}
+
+/**
+ * \brief Trace function for node RSS.
+ *
+ * \param oldValue Old RSS value.
+ * \param rss New RSS value.
+ */
+void NodeRss(Ptr<WirelessModuleUtility> utilitySend, double time)
+{
+  Time t = Simulator::Now();
+  double rss = utilitySend->GetRss();
+  NS_LOG_UNCOND(Simulator::Now().GetSeconds() << "s Node RSS = " << rss << "W");
+  if (t.GetSeconds() < time)
+  {
+    Simulator::Schedule(Seconds(0.2), &NodeRss, utilitySend, time);
+  }
+}
+
+void NodePdr(Ptr<WirelessModuleUtility> utilitySend, double time)
+{
+  Time t = Simulator::Now();
+  double pdr = utilitySend->GetPdr();
+  NS_LOG_UNCOND(Simulator::Now().GetSeconds() << "s Node PDR = " << pdr);
+
+  if (t.GetSeconds() < time)
+  {
+    Simulator::Schedule(Seconds(0.2), &NodePdr, utilitySend, time);
+  }
+}
+
+void GetChannel(Ptr<WirelessModuleUtility> utilitySend, double time)
+{
+  Time t = Simulator::Now();
+  double channel = utilitySend->GetPhyLayerInfo().currentChannel;
+  NS_LOG_UNCOND(Simulator::Now().GetSeconds() << " channel = " << channel);
+
+  if (t.GetSeconds() < time)
+  {
+    Simulator::Schedule(Seconds(0.2), &GetChannel, utilitySend, time);
+  }
+}
+
+/**
+ * \brief Trace function for node RX throughput.
+ *
+ * \param oldValue Old RX throughput value.
+ * \param rxThroughput New RX throughput value.
+ */
 void NodeThroughputRx(double oldValue, double rxThroughput)
 {
-    NS_LOG_UNCOND(Simulator::Now().GetSeconds() << "s Node RX throughput = "
-                                                << rxThroughput);
-}
-
-NodeContainer
-createSensorNodes(int n)
-{
-    NodeContainer container;
-    container.Create(n);
-    return container;
-}
-
-NetDeviceContainer
-setupWifi(NodeContainer sensorNodes, NodeContainer apNode)
-{
-    // nodes
-    int jammerIndex = sensorNodes.GetN() - 1;
-    NodeContainer honestNodes;
-    for (int i = 0; i < jammerIndex; i++)
-        honestNodes.Add(sensorNodes.Get(i));
-
-    NodeContainer jammerNodes;
-    jammerNodes.Add(sensorNodes.Get(jammerIndex));
-
-    // wifi phy and mac
-    YansWifiChannelHelper channel = YansWifiChannelHelper::Default();
-    YansWifiPhyHelper phy;
-    phy.SetChannel(channel.Create());
-
-    WifiMacHelper mac;
-    Ssid ssid = Ssid("ns-3-ssid");
-
-    WifiHelper wifi;
-
-    // wireless devices
-    NetDeviceContainer staDevices;
-    NetDeviceContainer jammerNetdevice;
-    mac.SetType("ns3::StaWifiMac", "Ssid", SsidValue(ssid), "ActiveProbing", BooleanValue(false));
-    staDevices = wifi.Install(phy, mac, honestNodes);
-    jammerNetdevice = wifi.Install(phy, mac, jammerNodes);
-
-    NetDeviceContainer apDevices;
-    mac.SetType("ns3::ApWifiMac", "Ssid", SsidValue(ssid));
-    apDevices = wifi.Install(phy, mac, apNode);
-
-    // mobility
-    MobilityHelper mobility;
-
-    mobility.SetPositionAllocator("ns3::GridPositionAllocator",
-                                  "MinX",
-                                  DoubleValue(0.0),
-                                  "MinY",
-                                  DoubleValue(0.0),
-                                  "DeltaX",
-                                  DoubleValue(5.0),
-                                  "DeltaY",
-                                  DoubleValue(10.0),
-                                  "GridWidth",
-                                  UintegerValue(3),
-                                  "LayoutType",
-                                  StringValue("RowFirst"));
-
-    mobility.SetMobilityModel("ns3::RandomWalk2dMobilityModel",
-                              "Bounds",
-                              RectangleValue(Rectangle(-50, 50, -50, 50)));
-    mobility.Install(sensorNodes);
-
-    mobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
-    mobility.Install(apNode);
-
-    // wireless module ultility
-    WirelessModuleUtilityHelper utilityHelper;
-
-    std::vector<std::string> AllInclusionList;
-    std::vector<std::string> AllExclusionList;
-
-    AllInclusionList.push_back("ns3::UdpHeader");
-    AllExclusionList.push_back("ns3::olsr::PacketHeader");
-
-    utilityHelper.SetInclusionList(AllInclusionList);
-    utilityHelper.SetExclusionList(AllExclusionList);
-
-    WirelessModuleUtilityContainer utilities = utilityHelper.InstallAll();
-
-    Ptr<WirelessModuleUtility> utilityPtr = utilities.Get(0);
-    utilityPtr->TraceConnectWithoutContext("Rss", MakeCallback(&NodeRss));
-    utilityPtr->TraceConnectWithoutContext("Pdr", MakeCallback(&NodePdr));
-    utilityPtr->TraceConnectWithoutContext("ThroughputRx", MakeCallback(&NodeThroughputRx));
-
-    // energy model
-    BasicEnergySourceHelper basicSourceHelper;
-    basicSourceHelper.Set("BasicEnergySourceInitialEnergyJ", DoubleValue(0.1));
-    EnergySourceContainer energySources = basicSourceHelper.Install(sensorNodes);
-    WifiRadioEnergyModelHelper radioEnergyHelper;
-    radioEnergyHelper.Set("TxCurrentA", DoubleValue(0.0174));
-    DeviceEnergyModelContainer deviceModels =
-        radioEnergyHelper.Install(staDevices, energySources);
-    DeviceEnergyModelContainer jammerDeviceModels =
-        radioEnergyHelper.Install(jammerNetdevice.Get(0), energySources.Get(jammerIndex));
-
-    // jammer
-    JammerHelper jammerHelper;
-    JammerContainer jammers = jammerHelper.Install(jammerNodes);
-
-    // pcap
-    phy.SetPcapDataLinkType(WifiPhyHelper::DLT_IEEE802_11_RADIO);
-    phy.EnablePcap("output/iotnet", apDevices.Get(0));
-
-    // return
-    NetDeviceContainer deviceContainer;
-    deviceContainer.Add(apDevices);
-    deviceContainer.Add(staDevices);
-    return deviceContainer;
+  NS_LOG_UNCOND(Simulator::Now().GetSeconds() << "s Node RX throughput = "
+                                              << rxThroughput);
 }
 
 int main(int argc, char *argv[])
 {
-    NS_LOG_UNCOND("IoT Network Simulator");
+  /** Simulation Parameters **/
+  /***************************************************************************/
 
-    CommandLine cmd(__FILE__);
-    cmd.Parse(argc, argv);
+  std::string phyMode("DsssRate1Mbps");
+  double Prss = -80;           // dBm
+  uint32_t PpacketSize = 1000; // bytes
+  bool verbose = false;
 
-    // realtime
-    GlobalValue::Bind("SimulatorImplementationType", StringValue("ns3::RealtimeSimulatorImpl"));
+  uint32_t numPackets = 1000; // number of packets to send
+  double interval = 0.1;      // seconds
+  double startTime = 0.0;     // seconds
+  double distanceToRx = 10.0; // meters
+  // uint32_t numberNode = 5;
+  double TimeSimulation = 3.2;
 
-    // create p2p nodes (n0, n1)
-    NodeContainer p2pNodes;
-    p2pNodes.Create(2);
+  CommandLine cmd;
+  cmd.AddValue("phyMode", "Wifi Phy mode", phyMode);
+  cmd.AddValue("Prss", "Intended primary RSS (dBm)", Prss);
+  cmd.AddValue("PpacketSize", "size of application packet sent", PpacketSize);
+  cmd.AddValue("numPackets", "Total number of packets to send", numPackets);
+  cmd.AddValue("startTime", "Simulation start time", startTime);
+  cmd.AddValue("distanceToRx", "X-Axis distance between nodes", distanceToRx);
+  cmd.AddValue("verbose", "Turn on all device log components", verbose);
+  cmd.Parse(argc, argv);
 
-    // create wifi sensor nodes (n2)
-    NodeContainer wifiStaNodes = createSensorNodes(2);
+  // LogComponentEnable ("NslWifiPhy", LOG_ALL);
+  LogComponentEnable("NslWifiChannel", LOG_ALL);
 
-    // get AP node (n0)
-    NodeContainer wifiApNode = p2pNodes.Get(0);
+  // LogComponentEnable ("MitigateByChannelHop", LOG_ALL);
+  // LogComponentEnable ("ReactiveJammer", LOG_ALL);
+  // LogComponentEnable ("WifiPhyStateHelper", LOG_ALL);
+  // LogComponentEnable ("JammerHelper", LOG_ALL);
+  // LogComponentEnable ("Jammer", LOG_ALL);
+  // LogComponentEnable ("DetectionHelper", LOG_ALL);
+  // LogComponentEnableAll(LOG_ALL);
 
-    // get server node (n1)
-    NodeContainer serverNode;
-    serverNode.Add(p2pNodes.Get(1));
+  /***************************************************************************/
 
-    // p2p devices
-    PointToPointHelper pointToPoint;
-    pointToPoint.SetDeviceAttribute("DataRate", StringValue("5Mbps"));
-    pointToPoint.SetChannelAttribute("Delay", StringValue("2ms"));
+  /** Creation and installation of nodes **/
+  /***************************************************************************/
+  // Creation of nodes
+  Time interPacketInterval = Seconds(interval);
 
-    NetDeviceContainer p2pDevices;
-    p2pDevices = pointToPoint.Install(p2pNodes);
+  // disable fragmentation for frames below 2200 bytes
+  Config::SetDefault("ns3::WifiRemoteStationManager::FragmentationThreshold",
+                     StringValue("2200"));
+  // turn off RTS/CTS for frames below 2200 bytes
+  Config::SetDefault("ns3::WifiRemoteStationManager::RtsCtsThreshold",
+                     StringValue("2200"));
+  // Fix non-unicast data rate to be the same as that of unicast
+  Config::SetDefault("ns3::WifiRemoteStationManager::NonUnicastMode",
+                     StringValue(phyMode));
+  /***************************************************************************/
 
-    // wifi
-    NetDeviceContainer wifiDevices = setupWifi(wifiStaNodes, wifiApNode);
+  /** Creation and installation of nodes **/
+  /***************************************************************************/
+  // Creation of nodes
+  NodeContainer c;
+  c.Create(3); // create  1 jammer + x nodes
+  NodeContainer networkNodes;
+  networkNodes.Add(c.Get(0));
+  networkNodes.Add(c.Get(1));
+  // networkNodes.Add (c.Get (2));
+  // networkNodes.Add (c.Get (3));
 
-    // internet ipv4 stack
-    InternetStackHelper stack;
-    stack.Install(p2pNodes);
-    stack.Install(wifiApNode);
-    stack.Install(wifiStaNodes);
+  // Wifi PHY layer
+  WifiHelper wifi;
+  wifi.SetStandard(WIFI_PHY_STANDARD_80211b);
+  NslWifiPhyHelper wifiPhy = NslWifiPhyHelper::Default();
 
-    // assign ip addresses
-    Ipv4AddressHelper address;
+  // Wifi channel
+  NslWifiChannelHelper wifiChannel;
+  wifiChannel.SetPropagationDelay("ns3::ConstantSpeedPropagationDelayModel");
+  wifiChannel.AddPropagationLoss("ns3::FriisPropagationLossModel");
+  Ptr<NslWifiChannel> wifiChannelPtr = wifiChannel.Create();
+  wifiPhy.SetChannel(wifiChannelPtr);
 
-    address.SetBase("10.1.2.0", "255.255.255.0");
-    Ipv4InterfaceContainer p2pInterfaces;
-    p2pInterfaces = address.Assign(p2pDevices);
+  // MAC layer
+  WifiMacHelper wifiMac = WifiMacHelper();
+  wifi.SetRemoteStationManager("ns3::ConstantRateWifiManager", "DataMode",
+                               StringValue(phyMode), "ControlMode", StringValue(phyMode));
+  // Set it to ad-hoc mode
+  wifiMac.SetType("ns3::AdhocWifiMac");
 
-    address.SetBase("10.1.1.0", "255.255.255.0");
-    address.Assign(wifiDevices);
+  // I PHY + MAC on legitimate node
+  NetDeviceContainer devices = wifi.Install(wifiPhy, wifiMac, networkNodes);
+  // Install MAC & PHY onto jammer
+  NetDeviceContainer jammerNetdevice = wifi.Install(wifiPhy, wifiMac, c.Get(2));
+  /***************************************************************************/
 
-    // server app
-    uint16_t sinkPort = 8080;
-    Address sinkAddress(InetSocketAddress(p2pInterfaces.GetAddress(1), sinkPort));
+  /** MobilityHelper **/
+  /***************************************************************************/
+  MobilityHelper mobility;
+  Ptr<ListPositionAllocator> positionAlloc =
+      CreateObject<ListPositionAllocator>();
+  // assign position to node
+  positionAlloc->Add(Vector(0.0, 0.0, 0.0));
+  positionAlloc->Add(Vector(distanceToRx, 0.1 * distanceToRx, 0.0));
+  positionAlloc->Add(Vector(2 * distanceToRx, 0.0, 0.0));
+  // positionAlloc->Add (Vector (3 * distanceToRx, 0.1 * distanceToRx, 0.0));
+  // positionAlloc->Add (Vector (2 * distanceToRx, -0.5 * distanceToRx, 0.0)); // jammer location
+  mobility.SetPositionAllocator(positionAlloc);
+  mobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
+  mobility.Install(c);
+  /***************************************************************************/
 
-    IoTNetServerHelper iotNetServerHelper(sinkAddress);
-    ApplicationContainer sinkApps = iotNetServerHelper.Install("c1", p2pDevices.Get(1));
-    sinkApps.Start(Seconds(0.));
-    sinkApps.Stop(Seconds(10.));
+  /** Energy Model **/
+  /***************************************************************************/
+  /* energy source */
+  BasicEnergySourceHelper basicSourceHelper;
+  // configure energy source
+  basicSourceHelper.Set("BasicEnergySourceInitialEnergyJ", DoubleValue(25.0));
+  // install on node
+  EnergySourceContainer energySources = basicSourceHelper.Install(c);
+  /* device energy model */
+  WifiRadioEnergyModelHelper radioEnergyHelper;
+  // configure radio energy model
+  radioEnergyHelper.Set("TxCurrentA", DoubleValue(0.0174));
+  // install on devices
+  DeviceEnergyModelContainer deviceModels =
+      radioEnergyHelper.Install(devices, energySources);
+  DeviceEnergyModelContainer jammerDeviceModels =
+      radioEnergyHelper.Install(jammerNetdevice.Get(0), energySources.Get(2));
+  /***************************************************************************/
 
-    // client
-    IoTNetSensorHelper iotNetSensorHelper(sinkAddress);
-    ApplicationContainer sensorApp = iotNetSensorHelper.Install("a1", wifiDevices.Get(1));
-    sensorApp.Start(Seconds(1.0));
-    sensorApp.Stop(Seconds(9.0));
+  /** WirelessModuleUtility **/
+  /***************************************************************************/
+  WirelessModuleUtilityHelper utilityHelper;
+  // set inclusion/exclusion list for all nodes
+  std::vector<std::string> AllInclusionList;
+  AllInclusionList.push_back("ns3::UdpHeader"); // record only UdpHeader
+  std::vector<std::string> AllExclusionList;
+  AllExclusionList.push_back("ns3::olsr::PacketHeader"); // ignore all olsr headers/trailers
+  // assign lists to helper
+  utilityHelper.SetInclusionList(AllInclusionList);
+  utilityHelper.SetExclusionList(AllExclusionList);
+  // install on all nodes
+  WirelessModuleUtilityContainer utilities = utilityHelper.InstallAll();
 
-    Ipv4GlobalRoutingHelper::PopulateRoutingTables();
+  // link node to utilities
+  Ptr<WirelessModuleUtility> utilitySend = utilities.Get(0);
+  Ptr<WirelessModuleUtility> utilityPtr = utilities.Get(1);
+  // Ptr<WirelessModuleUtility> utilityPtr2 = utilities.Get (2);
+  // Ptr<WirelessModuleUtility> utilityPtr3 = utilities.Get (3);
+  /***************************************************************************/
 
-    // net animation
-    AnimationInterface anim("output/wireless-animation.xml");
-    anim.EnablePacketMetadata();
+  /** Jammer **/
+  /***************************************************************************/
+  JammerHelper jammerHelper;
+  // configure jammer type
+  jammerHelper.SetJammerType("ns3::ReactiveJammer");
+  // set jammer parameters
+  // jammerHelper.Set("ConstantJammerJammingDuration",TimeValue (Seconds (0.05)));
+  // install jammer
+  JammerContainer jammers = jammerHelper.Install(c.Get(2));
+  // Get pointer to Jammer
+  Ptr<Jammer> jammerPtr = jammers.Get(0);
+  /***************************************************************************/
 
-    // pcap tracing
-    pointToPoint.EnablePcapAll("output/iotnet");
+  //**JammingMitigation**///
+  /***************************************************************************/
+  JammingMitigationHelper mitigationHelper;
+  // configure mitigation type
+  mitigationHelper.SetJammingMitigationType("ns3::MitigateByChannelHop");
+  // configure mitigation parameters
+  mitigationHelper.Set("MitigateByChannelHopChannelHopDelay",
+                       TimeValue(Seconds(0.0)));
+  mitigationHelper.Set("MitigateByChannelHopDetectionMethod",
+                       UintegerValue(MitigateByChannelHop::PDR_ONLY));
+  // install mitigation on honest nodes
+  JammingMitigationContainer mitigators = mitigationHelper.Install(networkNodes);
+  // get pointer to mitigation object from jamming mitigation container
+  Ptr<JammingMitigation> mitigationPtr = mitigators.Get(1);
+  Ptr<JammingMitigation> mitigationPtr2 = mitigators.Get(0);
 
-    // run simulation
-    Simulator::Stop(Seconds(10.0));
-    Simulator::Run();
-    Simulator::Destroy();
+  /***************************************************************************/
 
-    return 0;
+  /** Internet stack **/
+  /***************************************************************************/
+  InternetStackHelper internet;
+  internet.Install(networkNodes);
+  // Assign Ip Address
+  Ipv4AddressHelper ipv4;
+  ipv4.SetBase("10.1.1.0", "255.255.255.0");
+  Ipv4InterfaceContainer ipv4Interface = ipv4.Assign(devices);
+  // CreateSocket Receiver
+  TypeId tid = TypeId::LookupByName("ns3::UdpSocketFactory");
+  Ptr<Socket> recvSink = Socket::CreateSocket(networkNodes.Get(1), tid); // node 3, receiver
+  InetSocketAddress local = InetSocketAddress(Ipv4Address::GetAny(), 80);
+  recvSink->Bind(local);
+  recvSink->SetRecvCallback(MakeCallback(&ReceivePacket));
+  // CreateSocket Transmitter
+  Ptr<Socket> source = Socket::CreateSocket(networkNodes.Get(0), tid); // node 0, sender
+  InetSocketAddress remote = InetSocketAddress(Ipv4Address::GetBroadcast(), 80);
+  source->SetAllowBroadcast(true);
+  source->Connect(remote);
+  /***************************************************************************/
+
+  /** Connect trace sources **/
+  /***************************************************************************/
+  // energy source
+  Ptr<EnergySource> basicSourcePtr = energySources.Get(1);
+  basicSourcePtr->TraceConnectWithoutContext("RemainingEnergy",
+                                             MakeCallback(&RemainingEnergy));
+  // using honest node device energy model list
+  Ptr<DeviceEnergyModel> basicRadioModelPtr = deviceModels.Get(1);
+  basicRadioModelPtr->TraceConnectWithoutContext("TotalEnergyConsumption",
+                                                 MakeCallback(&TotalEnergy));
+  /***************************************************************************/
+
+  /** AnimationsInterface **/
+  /***************************************************************************/
+  AnimationInterface anim("ConstantRate2.xml");
+  anim.EnablePacketMetadata(true);
+  anim.EnableIpv4RouteTracking("tcp-Wifi-route.xml", Seconds(0), Seconds(10), Seconds(0.25));
+  /***************************************************************************/
+
+  /** Simulation Setup **/
+  /***************************************************************************/
+  Time t = Simulator::Now();
+  std::cout << "Time hello: " << t.GetSeconds() << std::endl;
+  Simulator::Schedule(Seconds(startTime), &GenerateTraffic, source,
+                      PpacketSize, networkNodes.Get(0), numPackets,
+                      interPacketInterval);
+
+  // start jammer at 7.0 seconds
+
+  Simulator::Schedule(Seconds(1), &ns3::Jammer::StartJammer,
+                      jammerPtr);
+
+  // Start Measure
+  Simulator::Schedule(Seconds(0.1), NodePdr, utilityPtr, TimeSimulation);
+  Simulator::Schedule(Seconds(0.1), NodePdr, utilitySend, TimeSimulation);
+
+  Simulator::Schedule(Seconds(0.1), GetChannel, utilityPtr, TimeSimulation);
+  Simulator::Schedule(Seconds(0.1), GetChannel, utilitySend, TimeSimulation);
+
+  Simulator::Schedule(Seconds(0.1), NodeRss, utilityPtr, TimeSimulation);
+
+  Simulator::Schedule(Seconds(1.2),
+                      &ns3::JammingMitigation::StartMitigation,
+                      mitigationPtr);
+
+  Simulator::Schedule(Seconds(1.2),
+                      &ns3::JammingMitigation::StartMitigation,
+                      mitigationPtr2);
+
+  NS_LOG_INFO("Run Simulation.");
+  Simulator::Stop(Seconds(TimeSimulation));
+  Simulator::Run();
+  Simulator::Destroy();
+  NS_LOG_INFO("Done.");
+
+  uint32_t actualPdr = utilityPtr->GetTotalPkts(); // receiver
+                                                   // uint32_t actualPdr2 = utilityPtr2->GetTotalPkts ();
+  // double actualPdr3 = utilityPtr3->GetRss ();
+  uint32_t actualSend = utilitySend->GetTotalPkts();
+  // u_int64_t actualReceive = utilityPtr2->GetTotalBytesTx();
+  // u_int64_t actualReceive2 = utilityPtr2->GetTotalBytesRx();
+
+  NS_LOG_UNCOND("Actual Bytes Send = " << actualSend);
+  // NS_LOG_UNCOND ("Actual Bytes Transmitter = " << actualReceive);
+  // NS_LOG_UNCOND ("Actual Bytes Receive = " << actualReceive2);
+
+  NS_LOG_UNCOND("Actual PDR = " << actualPdr);
+  // NS_LOG_UNCOND ("Actual PDR = " << actualPdr2);
+  // NS_LOG_UNCOND ("Actual Bytes Receive = " << actualPdr3);
+
+  return 0;
+
+  /***************************************************************************/
 }

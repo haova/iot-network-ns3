@@ -1,3 +1,4 @@
+/* -*-  Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil; -*- */
 /*
  * Copyright (c) 2016
  *
@@ -21,57 +22,16 @@
 #define WIFI_UTILS_H
 
 #include "block-ack-type.h"
+#include "wifi-preamble.h"
+#include "wifi-mode.h"
 
-#include "ns3/fatal-error.h"
-#include "ns3/ptr.h"
+namespace ns3 {
 
-#include <list>
-#include <map>
-#include <set>
-
-namespace ns3
-{
-
+class WifiNetDevice;
 class WifiMacHeader;
+class WifiMode;
 class Packet;
-
-/**
- * Wifi direction. Values are those defined for the TID-to-Link Mapping Control Direction
- * field in IEEE 802.11be D3.1 Figure 9-1002ap
- */
-enum class WifiDirection : uint8_t
-{
-    DOWNLINK = 0,
-    UPLINK = 1,
-    BOTH_DIRECTIONS = 2,
-};
-
-/**
- * \brief Stream insertion operator.
- *
- * \param os the stream
- * \param direction the direction
- * \returns a reference to the stream
- */
-inline std::ostream&
-operator<<(std::ostream& os, const WifiDirection& direction)
-{
-    switch (direction)
-    {
-    case WifiDirection::DOWNLINK:
-        return (os << "DOWNLINK");
-    case WifiDirection::UPLINK:
-        return (os << "UPLINK");
-    case WifiDirection::BOTH_DIRECTIONS:
-        return (os << "BOTH_DIRECTIONS");
-    default:
-        NS_FATAL_ERROR("Invalid direction");
-        return (os << "INVALID");
-    }
-}
-
-/// @brief TID-indexed map of the link set to which the TID is mapped
-using WifiTidLinkMapping = std::map<uint8_t, std::set<uint8_t>>;
+class Time;
 
 /**
  * Convert from dBm to Watts.
@@ -80,15 +40,15 @@ using WifiTidLinkMapping = std::map<uint8_t, std::set<uint8_t>>;
  *
  * \return the equivalent Watts for the given dBm
  */
-double DbmToW(double dbm);
+double DbmToW (double dbm);
 /**
  * Convert from dB to ratio.
  *
- * \param db the value in dB
+ * \param db
  *
- * \return ratio in linear scale
+ * \return ratio
  */
-double DbToRatio(double db);
+double DbToRatio (double db);
 /**
  * Convert from Watts to dBm.
  *
@@ -96,54 +56,100 @@ double DbToRatio(double db);
  *
  * \return the equivalent dBm for the given Watts
  */
-double WToDbm(double w);
+double WToDbm (double w);
 /**
  * Convert from ratio to dB.
  *
- * \param ratio the ratio in linear scale
+ * \param ratio
  *
- * \return the value in dB
+ * \return dB
  */
-double RatioToDb(double ratio);
+double RatioToDb (double ratio);
 /**
- * Return the total Ack size (including FCS trailer).
- *
- * \return the total Ack size in bytes
+ * \param frequency the frequency to check
+ * \return whether frequency is in the 2.4 GHz band
  */
-uint32_t GetAckSize();
+bool Is2_4Ghz (double frequency);
 /**
- * Return the total BlockAck size (including FCS trailer).
- *
- * \param type the BlockAck type
- * \return the total BlockAck size in bytes
+ * \param frequency the frequency to check
+ * \return whether frequency is in the 5 GHz band
  */
-uint32_t GetBlockAckSize(BlockAckType type);
+bool Is5Ghz (double frequency);
 /**
- * Return the total BlockAckRequest size (including FCS trailer).
+ * Convert the guard interval to nanoseconds based on the wifimode.
  *
- * \param type the BlockAckRequest type
- * \return the total BlockAckRequest size in bytes
+ * \param mode the wifimode
+ * \param device pointer to the WifiNetDevice object
+ *
+ * \return the guard interval duration in nanoseconds
  */
-uint32_t GetBlockAckRequestSize(BlockAckReqType type);
+uint16_t ConvertGuardIntervalToNanoSeconds (WifiMode mode, const Ptr<WifiNetDevice> device);
 /**
- * Return the total MU-BAR size (including FCS trailer).
+ * Convert the guard interval to nanoseconds based on the wifimode.
  *
- * \param types the list of Block Ack Request types of the individual BARs
- * \return the total MU-BAR size in bytes
+ * \param mode the wifimode
+ * \param htShortGuardInterval whether HT/VHT short guard interval is enabled
+ * \param heGuardInterval the HE guard interval duration
+ *
+ * \return the guard interval duration in nanoseconds
  */
-uint32_t GetMuBarSize(std::list<BlockAckReqType> types);
+uint16_t ConvertGuardIntervalToNanoSeconds (WifiMode mode, bool htShortGuardInterval, Time heGuardInterval);
+/**
+ * Return the preamble to be used for the transmission.
+ *
+ * \param modulation the modulation selected for the transmission
+ * \param useShortPreamble whether short preamble should be used
+ * \param useGreenfield whether HT greenfield should be used
+ *
+ * \return the preamble to be used for the transmission
+ */
+WifiPreamble GetPreambleForTransmission (WifiModulationClass modulation, bool useShortPreamble, bool useGreenfield);
+/**
+ * Return the channel width that corresponds to the selected mode (instead of
+ * letting the PHY's default channel width). This is especially useful when using
+ * non-HT modes with HT/VHT/HE capable stations (with default width above 20 MHz).
+ *
+ * \param mode selected WifiMode
+ * \param maxSupportedChannelWidth maximum channel width supported by the PHY layer
+ * \return channel width adapted to the selected mode
+ */
+uint16_t GetChannelWidthForTransmission (WifiMode mode, uint16_t maxSupportedChannelWidth);
+/**
+ * Return whether the modulation class of the selected mode for the
+ * control answer frame is allowed.
+ *
+ * \param modClassReq modulation class of the request frame
+ * \param modClassAnswer modulation class of the answer frame
+ *
+ * \return true if the modulation class of the selected mode for the
+ * control answer frame is allowed, false otherwise
+ */
+bool IsAllowedControlAnswerModulationClass (WifiModulationClass modClassReq, WifiModulationClass modClassAnswer);
+/**
+ * Return the total ACK size (including FCS trailer).
+ *
+ * \return the total ACK size
+ */
+uint32_t GetAckSize (void);
+/**
+ * Return the total Block ACK size (including FCS trailer).
+ *
+ * \param type the Block ACK type
+ * \return the total Block ACK size
+ */
+uint32_t GetBlockAckSize (BlockAckType type);
 /**
  * Return the total RTS size (including FCS trailer).
  *
- * \return the total RTS size in bytes
+ * \return the total RTS size
  */
-uint32_t GetRtsSize();
+uint32_t GetRtsSize (void);
 /**
  * Return the total CTS size (including FCS trailer).
  *
- * \return the total CTS size in bytes
+ * \return the total CTS size
  */
-uint32_t GetCtsSize();
+uint32_t GetCtsSize (void);
 /**
  * \param seq MPDU sequence number
  * \param winstart sequence number window start
@@ -152,13 +158,13 @@ uint32_t GetCtsSize();
  *
  * This method checks if the MPDU's sequence number is inside the scoreboard boundaries or not
  */
-bool IsInWindow(uint16_t seq, uint16_t winstart, uint16_t winsize);
+bool IsInWindow (uint16_t seq, uint16_t winstart, uint16_t winsize);
 /**
  * Add FCS trailer to a packet.
  *
- * \param packet the packet to add a trailer to
+ * \param packet
  */
-void AddWifiMacTrailer(Ptr<Packet> packet);
+void AddWifiMacTrailer (Ptr<Packet> packet);
 /**
  * Return the total size of the packet after WifiMacHeader and FCS trailer
  * have been added.
@@ -168,32 +174,31 @@ void AddWifiMacTrailer(Ptr<Packet> packet);
  * \param isAmpdu whether packet is part of an A-MPDU
  * \return the total packet size
  */
-uint32_t GetSize(Ptr<const Packet> packet, const WifiMacHeader* hdr, bool isAmpdu);
-
+uint32_t GetSize (Ptr<const Packet> packet, const WifiMacHeader *hdr, bool isAmpdu);
 /**
- * Check if the given TID-to-Link Mappings are valid for a negotiation type of 1. Specifically,
- * it is checked whether all TIDs are mapped to the same set of links.
+ * \param packet the packet to check
+ * \returns true if packet is an A-MPDU
  *
- * \param dlLinkMapping the given TID-to-Link Mapping for Downlink
- * \param ulLinkMapping the given TID-to-Link Mapping for Uplink
- * \return whether the given TID-to-Link Mappings are valid for a negotiation type of 1
+ * This method checks if the packet is an A-MPDU by looking for A-MPDU subframe headers.
  */
-bool TidToLinkMappingValidForNegType1(const WifiTidLinkMapping& dlLinkMapping,
-                                      const WifiTidLinkMapping& ulLinkMapping);
+bool IsAmpdu (Ptr<const Packet> packet);
 
-/// Size of the space of sequence numbers
-static constexpr uint16_t SEQNO_SPACE_SIZE = 4096;
+  /**
+   * Get the maximum PPDU duration (see Section 10.14 of 802.11-2016) for
+   * the PHY layers defining the aPPDUMaxTime characteristic (HT, VHT and HE).
+   * Return zero otherwise.
+   *
+   * \param preamble the preamble type
+   *
+   * \return the maximum PPDU duration, if defined, and zero otherwise
+   */
+  Time GetPpduMaxTime (WifiPreamble preamble);
 
-/// Size of the half the space of sequence numbers (used to determine old packets)
-static constexpr uint16_t SEQNO_SPACE_HALF_SIZE = SEQNO_SPACE_SIZE / 2;
+  /// Size of the space of sequence numbers
+  const uint16_t SEQNO_SPACE_SIZE = 4096;
 
-/// Link ID for single link operations (helps tracking places where correct link
-/// ID is to be used to support multi-link operations)
-static constexpr uint8_t SINGLE_LINK_OP_ID = 0;
-
-/// Invalid link identifier
-static constexpr uint8_t WIFI_LINKID_UNDEFINED = 0xff;
-
+  /// Size of the half the space of sequence numbers (used to determine old packets)
+  const uint16_t SEQNO_SPACE_HALF_SIZE = SEQNO_SPACE_SIZE / 2;
 } // namespace ns3
 
 #endif /* WIFI_UTILS_H */

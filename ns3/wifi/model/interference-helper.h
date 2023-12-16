@@ -1,3 +1,4 @@
+/* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
 /*
  * Copyright (c) 2005,2006 INRIA
  *
@@ -20,542 +21,414 @@
 #ifndef INTERFERENCE_HELPER_H
 #define INTERFERENCE_HELPER_H
 
-#include "phy-entity.h"
+#include "ns3/nstime.h"
+#include "wifi-tx-vector.h"
+#include <map>
+#include <stdint.h>
+#include <vector>
+#include <list>
+#include "wifi-mode.h"
+#include "wifi-preamble.h"
+#include "wifi-phy-standard.h"
+#include "ns3/nstime.h"
+#include "ns3/simple-ref-count.h"
+#include "wifi-tx-vector.h"
+#include <map>
 
-#include "ns3/object.h"
+namespace ns3 {
 
-namespace ns3
-{
-
-class WifiPpdu;
-class WifiPsdu;
+class Packet;
 class ErrorRateModel;
 
 /**
  * \ingroup wifi
  * \brief handles interference calculations
- * \brief signal event for a PPDU.
+ * \brief signal event for a packet.
  */
 class Event : public SimpleRefCount<Event>
 {
-  public:
-    /**
-     * Create an Event with the given parameters. Note that <i>rxPower</i> will
-     * be moved into this object.
-     *
-     * \param ppdu the PPDU
-     * \param duration duration of the PPDU
-     * \param rxPower the received power per band (W)
-     */
-    Event(Ptr<const WifiPpdu> ppdu, Time duration, RxPowerWattPerChannelBand&& rxPower);
-    ~Event();
+public:
+  /**
+   * Create an Event with the given parameters.
+   *
+   * \param packet the packet
+   * \param txVector TXVECTOR of the packet
+   * \param duration duration of the signal
+   * \param rxPower the receive power (w)
+   */
+  Event (Ptr<const Packet> packet, WifiTxVector txVector, Time duration, double rxPower);
+  ~Event ();
 
-    /**
-     * Return the PPDU.
-     *
-     * \return the PPDU
-     */
-    Ptr<const WifiPpdu> GetPpdu() const;
-    /**
-     * Return the start time of the signal.
-     *
-     * \return the start time of the signal
-     */
-    Time GetStartTime() const;
-    /**
-     * Return the end time of the signal.
-     *
-     * \return the end time of the signal
-     */
-    Time GetEndTime() const;
-    /**
-     * Return the duration of the signal.
-     *
-     * \return the duration of the signal
-     */
-    Time GetDuration() const;
-    /**
-     * Return the total received power (W).
-     *
-     * \return the total received power (W)
-     */
-    double GetRxPowerW() const;
-    /**
-     * Return the received power (W) for a given band.
-     *
-     * \param band the band for which the power should be returned
-     * \return the received power (W) for a given band
-     */
-    double GetRxPowerW(const WifiSpectrumBandInfo& band) const;
-    /**
-     * Return the received power (W) for all bands.
-     *
-     * \return the received power (W) for all bands.
-     */
-    const RxPowerWattPerChannelBand& GetRxPowerWPerBand() const;
-    /**
-     * Update the received power (W) for all bands, i.e. add up the received power
-     * to the current received power, for each band.
-     *
-     * \param rxPower the received power (W) for all bands.
-     */
-    void UpdateRxPowerW(const RxPowerWattPerChannelBand& rxPower);
-    /**
-     * Update the PPDU that initially generated the event.
-     * This is needed to have the PPDU holding the correct TXVECTOR
-     * upon reception of multiple signals carring the same content
-     * but over different channel width (typically non-HT duplicates).
-     *
-     * \param ppdu the new PPDU to use for this event.
-     */
-    void UpdatePpdu(Ptr<const WifiPpdu> ppdu);
+  /** Return the packet.
+   *
+   * \return the packet
+   */
+  Ptr<const Packet> GetPacket (void) const;
+  /**
+   * Return the start time of the signal.
+   *
+   * \return the start time of the signal
+   */
+  Time GetStartTime (void) const;
+  /**
+   * Return the end time of the signal.
+   *
+   * \return the end time of the signal
+   */
+  Time GetEndTime (void) const;
+  /**
+   * Return the receive power (w).
+   *
+   * \return the receive power (w)
+   */
+  double GetRxPowerW (void) const;
+  /**
+   * Return the TXVECTOR of the packet.
+   *
+   * \return the TXVECTOR of the packet
+   */
+  WifiTxVector GetTxVector (void) const;
+  /**
+   * Return the Wi-Fi mode used for the payload.
+   *
+   * \return the Wi-Fi mode used for the payload
+   */
+  WifiMode GetPayloadMode (void) const;
 
-  private:
-    Ptr<const WifiPpdu> m_ppdu;           //!< PPDU
-    Time m_startTime;                     //!< start time
-    Time m_endTime;                       //!< end time
-    RxPowerWattPerChannelBand m_rxPowerW; //!< received power in watts per band
+  enum WifiPreamble GetPreambleType (void) const;
+
+
+private:
+  Ptr<const Packet> m_packet; ///< packet
+  WifiTxVector m_txVector; ///< TXVECTOR
+  enum WifiPreamble m_preamble;
+  Time m_startTime; ///< start time
+  Time m_endTime; ///< end time
+  double m_rxPowerW; ///< receive power in watts
 };
-
-/**
- * \brief Stream insertion operator.
- *
- * \param os the stream
- * \param event the event
- * \returns a reference to the stream
- */
-std::ostream& operator<<(std::ostream& os, const Event& event);
 
 /**
  * \ingroup wifi
  * \brief handles interference calculations
  */
-class InterferenceHelper : public Object
+class InterferenceHelper
 {
-  public:
-    InterferenceHelper();
-    ~InterferenceHelper() override;
+public:
+  /**
+   * Signal event for a packet.
+   */
 
-    /**
-     * \brief Get the type ID.
-     * \return the object TypeId
-     */
-    static TypeId GetTypeId();
+  /**
+   * A struct for both SNR and PER
+   */
+  struct SnrPer
+  {
+    double snr; ///< SNR
+    double per; ///< PER
+    double packetRss;
+  };
 
-    /**
-     * Add a frequency band.
-     *
-     * \param band the band to be added
-     */
-    void AddBand(const WifiSpectrumBandInfo& band);
+  InterferenceHelper ();
+  ~InterferenceHelper ();
 
-    /**
-     * Check whether bands are already tracked by this interference helper.
-     *
-     * \return true if bands are tracked by this interference helper, false otherwise
-     */
-    bool HasBands() const;
 
-    /**
-     * Update the frequency bands that belongs to a given frequency range when the spectrum model is
-     * changed.
-     *
-     * \param bands the bands to be added in the new spectrum model
-     * \param freqRange the frequency range the bands belong to
-     */
-    void UpdateBands(const std::vector<WifiSpectrumBandInfo>& bands,
-                     const FrequencyRange& freqRange);
 
-    /**
-     * Set the noise figure.
-     *
-     * \param value noise figure in linear scale
-     */
-    void SetNoiseFigure(double value);
-    /**
-     * Set the error rate model for this interference helper.
-     *
-     * \param rate Error rate model
-     */
-    void SetErrorRateModel(const Ptr<ErrorRateModel> rate);
+  /**
+   * Set the noise figure.
+   *
+   * \param value noise figure
+   */
+  void SetNoiseFigure (double value);
+  /**
+   * Set the error rate model for this interference helper.
+   *
+   * \param rate Error rate model
+   */
+  void SetErrorRateModel (Ptr<ErrorRateModel> rate);  /**
+   * Return the noise figure
+   *
+   * \return noise figure
+   */
 
-    /**
-     * Return the error rate model.
-     *
-     * \return Error rate model
-     */
-    Ptr<ErrorRateModel> GetErrorRateModel() const;
-    /**
-     * Set the number of RX antennas in the receiver corresponding to this
-     * interference helper.
-     *
-     * \param rx the number of RX antennas
-     */
-    void SetNumberOfReceiveAntennas(uint8_t rx);
+  double GetNoiseFigure (void) const;
+  /**
+   * Return the error rate model.
+   *
+   * \return Error rate model
+   */
+  Ptr<ErrorRateModel> GetErrorRateModel (void) const;
+  /**
+   * Set the number of RX antennas in the receiver corresponding to this
+   * interference helper.
+   *
+   * \param rx the number of RX antennas
+   */
+  void SetNumberOfReceiveAntennas (uint8_t rx);
 
-    /**
-     * \param energyW the minimum energy (W) requested
-     * \param band identify the requested band
-     *
-     * \returns the expected amount of time the observed
-     *          energy on the medium for a given band will
-     *          be higher than the requested threshold.
-     */
-    Time GetEnergyDuration(double energyW, const WifiSpectrumBandInfo& band);
+  /**
+   * \param energyW the minimum energy (W) requested
+   *
+   * \returns the expected amount of time the observed
+   *          energy on the medium will be higher than
+   *          the requested threshold.
+   */
+  Time GetEnergyDuration (double energyW) const;
 
-    /**
-     * Add the PPDU-related signal to interference helper.
-     *
-     * \param ppdu the PPDU
-     * \param duration the PPDU duration
-     * \param rxPower received power per band (W)
-     * \param isStartHePortionRxing flag whether the event corresponds to the start of the HE
-     * portion reception (only used for MU)
-     *
-     * \return Event
-     */
-    Ptr<Event> Add(Ptr<const WifiPpdu> ppdu,
-                   Time duration,
-                   RxPowerWattPerChannelBand& rxPower,
-                   bool isStartHePortionRxing = false);
+  struct InterferenceHelper::SnrPer CalculateSnrPer (Ptr<Event> event);
 
-    /**
-     * Add a non-Wifi signal to interference helper.
-     * \param duration the duration of the signal
-     * \param rxPower received power per band (W)
-     */
-    void AddForeignSignal(Time duration, RxPowerWattPerChannelBand& rxPower);
-    /**
-     * Calculate the SNIR at the start of the payload and accumulate
-     * all SNIR changes in the SNIR vector for each MPDU of an A-MPDU.
-     * This workaround is required in order to provide one PER per MPDU, for
-     * reception success/failure evaluation, while hiding aggregation details from
-     * this class.
-     *
-     * \param event the event corresponding to the first time the corresponding PPDU arrives
-     * \param channelWidth the channel width used to transmit the PSDU (in MHz)
-     * \param band identify the band used by the PSDU
-     * \param staId the station ID of the PSDU (only used for MU)
-     * \param relativeMpduStartStop the time window (pair of start and end times) of PHY payload to
-     * focus on
-     *
-     * \return struct of SNR and PER (with PER being evaluated over the provided time window)
-     */
-    PhyEntity::SnrPer CalculatePayloadSnrPer(Ptr<Event> event,
-                                             uint16_t channelWidth,
-                                             const WifiSpectrumBandInfo& band,
-                                             uint16_t staId,
-                                             std::pair<Time, Time> relativeMpduStartStop) const;
-    /**
-     * Calculate the SNIR for the event (starting from now until the event end).
-     *
-     * \param event the event corresponding to the first time the corresponding PPDU arrives
-     * \param channelWidth the channel width (in MHz)
-     * \param nss the number of spatial streams
-     * \param band identify the band used by the PSDU
-     *
-     * \return the SNR for the PPDU in linear scale
-     */
-    double CalculateSnr(Ptr<Event> event,
-                        uint16_t channelWidth,
-                        uint8_t nss,
-                        const WifiSpectrumBandInfo& band) const;
-    /**
-     * Calculate the SNIR at the start of the PHY header and accumulate
-     * all SNIR changes in the SNIR vector.
-     *
-     * \param event the event corresponding to the first time the corresponding PPDU arrives
-     * \param channelWidth the channel width (in MHz) for header measurement
-     * \param band identify the band used by the PSDU
-     * \param header the PHY header to consider
-     *
-     * \return struct of SNR and PER
-     */
-    PhyEntity::SnrPer CalculatePhyHeaderSnrPer(Ptr<Event> event,
-                                               uint16_t channelWidth,
-                                               const WifiSpectrumBandInfo& band,
-                                               WifiPpduField header) const;
+  /**
+   * Add the packet-related signal to interference helper.
+   *
+   * \param packet the packet
+   * \param txVector TXVECTOR of the packet
+   * \param duration the duration of the signal
+   * \param rxPower receive power (W)
+   *
+   * \return Event
+   */
+  Ptr<Event> Add (Ptr<const Packet> packet, WifiTxVector txVector, Time duration, double rxPower);
 
-    /**
-     * Notify that RX has started.
-     */
-    void NotifyRxStart();
-    /**
-     * Notify that RX has ended.
-     *
-     * \param endTime the end time of the signal
-     * \param freqRange the frequency range in which the received signal event had been detected
-     */
-    void NotifyRxEnd(Time endTime, const FrequencyRange& freqRange);
+  /**
+   * Add a non-Wifi signal to interference helper.
+   * \param duration the duration of the signal
+   * \param rxPower receive power (W)
+   * 
+   * 
+   */
+  double CurrentNodeRss (WifiTxVector txVector);
+  void AddForeignSignal (Time duration, double rxPower);
+  /**
+   * Calculate the SNIR at the start of the payload and accumulate
+   * all SNIR changes in the snir vector for each MPDU of an A-MPDU.
+   * This workaround is required in order to provide one PER per MPDU, for
+   * reception success/failure evaluation, while hiding aggregation details from
+   * this class.
+   *
+   * \param event the event corresponding to the first time the corresponding packet arrives
+   * \param relativeMpduStartStop the time window (pair of start and end times) of PLCP payload to focus on
+   *
+   * \return struct of SNR and PER (with PER being evaluated over the provided time window)
+   */
+  struct InterferenceHelper::SnrPer CalculatePayloadSnrPer (Ptr<Event> event, std::pair<Time, Time> relativeMpduStartStop) const;
+  /**
+   * Calculate the SNIR for the event (starting from now until the event end).
+   *
+   * \param event the event corresponding to the first time the corresponding packet arrives
+   *
+   * \return the SNR for the packet
+   */
+  double CalculateSnr (Ptr<Event> event) const;
+  /**
+   * Calculate the SNIR at the start of the legacy PHY header and accumulate
+   * all SNIR changes in the snir vector.
+   *
+   * \param event the event corresponding to the first time the corresponding packet arrives
+   *
+   * \return struct of SNR and PER
+   */
+  struct InterferenceHelper::SnrPer CalculateLegacyPhyHeaderSnrPer (Ptr<Event> event) const;
+  /**
+   * Calculate the SNIR at the start of the non-legacy PHY header and accumulate
+   * all SNIR changes in the snir vector.
+   *
+   * \param event the event corresponding to the first time the corresponding packet arrives
+   *
+   * \return struct of SNR and PER
+   */
+  struct InterferenceHelper::SnrPer CalculateNonLegacyPhyHeaderSnrPer (Ptr<Event> event) const;
 
-    /**
-     * Update event to scale its received power (W) per band.
-     *
-     * \param event the event to be updated
-     * \param rxPower the received power (W) per band to be added to the current event
-     */
-    void UpdateEvent(Ptr<Event> event, const RxPowerWattPerChannelBand& rxPower);
+  /**
+   * Notify that RX has started.
+   */
+  void NotifyRxStart ();
+  /**
+   * Notify that RX has ended.
+   */
+  void NotifyRxEnd ();
+  /**
+   * Erase all events.
+   */
+  void EraseEvents (void);
 
-  protected:
-    void DoDispose() override;
 
-    /**
-     * Calculate SNR (linear ratio) from the given signal power and noise+interference power.
-     *
-     * \param signal signal power, W
-     * \param noiseInterference noise and interference power, W
-     * \param channelWidth signal width (MHz)
-     * \param nss the number of spatial streams
-     *
-     * \return SNR in linear scale
-     */
-    double CalculateSnr(double signal,
-                        double noiseInterference,
-                        uint16_t channelWidth,
-                        uint8_t nss) const;
-    /**
-     * Calculate the success rate of the chunk given the SINR, duration, and TXVECTOR.
-     * The duration and TXVECTOR are used to calculate how many bits are present in the chunk.
-     *
-     * \param snir the SINR
-     * \param duration the duration of the chunk
-     * \param mode the WifiMode
-     * \param txVector the TXVECTOR
-     * \param field the PPDU field to which the chunk belongs to
-     *
-     * \return the success rate
-     */
-    double CalculateChunkSuccessRate(double snir,
-                                     Time duration,
-                                     WifiMode mode,
-                                     const WifiTxVector& txVector,
-                                     WifiPpduField field) const;
-    /**
-     * Calculate the success rate of the payload chunk given the SINR, duration, and TXVECTOR.
-     * The duration and TXVECTOR are used to calculate how many bits are present in the payload
-     * chunk.
-     *
-     * \param snir the SINR
-     * \param duration the duration of the chunk
-     * \param txVector the TXVECTOR
-     * \param staId the station ID of the PSDU (only used for MU)
-     *
-     * \return the success rate
-     */
-    double CalculatePayloadChunkSuccessRate(double snir,
-                                            Time duration,
-                                            const WifiTxVector& txVector,
-                                            uint16_t staId = SU_STA_ID) const;
+private:
+  /**
+   * Noise and Interference (thus Ni) event.
+   */
+  class NiChange
+  {
+public:
 
-  private:
+    Time GetTime (void) const;
+    bool operator < (const NiChange& o) const;
     /**
-     * Noise and Interference (thus Ni) event.
+     * Create a NiChange at the given time and the amount of NI change.
+     *
+     * \param power the power
+     * \param event causes this NI change
      */
-    class NiChange
-    {
-      public:
-        /**
-         * Create a NiChange at the given time and the amount of NI change.
-         *
-         * \param power the power in watts
-         * \param event causes this NI change
-         */
-        NiChange(double power, Ptr<Event> event);
-        ~NiChange();
-        /**
-         * Return the power
-         *
-         * \return the power in watts
-         */
-        double GetPower() const;
-        /**
-         * Add a given amount of power.
-         *
-         * \param power the power to be added to the existing value in watts
-         */
-        void AddPower(double power);
-        /**
-         * Return the event causes the corresponding NI change
-         *
-         * \return the event
-         */
-        Ptr<Event> GetEvent() const;
+    NiChange (Time time, double delta);
+    /**
+     * Return the power
+     *
+     * \return the power
+     */
+    double GetPower (void) const;
+    /**
+     * Add a given amount of power.
+     *
+     * \param power the power to be added to the existing value
+     */
+    void AddPower (double power);
+    /**
+     * Return the event causes the corresponding NI change
+     *
+     * \return the event
+     */
+    Ptr<Event> GetEvent (void) const;
 
-      private:
-        double m_power;     ///< power in watts
-        Ptr<Event> m_event; ///< event
-    };
+    double GetDelta (void) const;
 
-    /**
-     * typedef for a multimap of NiChange
-     */
-    using NiChanges = std::multimap<Time, NiChange>;
+    
 
-    /**
-     * Map of NiChanges per band
-     */
-    using NiChangesPerBand = std::map<WifiSpectrumBandInfo, NiChanges>;
 
-    /**
-     * Map of first power per band
-     */
-    using FirstPowerPerBand = std::map<WifiSpectrumBandInfo, double>;
+private:
+    double m_power; ///< power
+    Ptr<Event> m_event; ///< event
+    Time m_time;
+    double m_delta;
+  };
 
-    /**
-     * Check whether a given band is tracked by this interference helper.
-     *
-     * \param band the band to be checked
-     * \return true if the band is already tracked by this interference helper, false otherwise
-     */
-    bool HasBand(const WifiSpectrumBandInfo& band) const;
+  /**
+   * typedef for a multimap of NiChanges
+   */
+  typedef std::vector<NiChange> NiChanges;
 
-    /**
-     * Check whether a given band belongs to a given frequency range.
-     *
-     * \param band the band to be checked
-     * \param freqRange the frequency range to check whether the band belong to
-     * \return true if the band belongs to the frequency range, false otherwise
-     */
-    bool IsBandInFrequencyRange(const WifiSpectrumBandInfo& band,
-                                const FrequencyRange& freqRange) const;
+  /**
+   * Append the given Event.
+   *
+   * \param event
+   */
+  void AppendEvent (Ptr<Event> event);
+  /**
+   * Calculate noise and interference power in W.
+   *
+   * \param event
+   * \param ni
+   *
+   * \return noise and interference power
+   */
+  double CalculateNoiseInterferenceW (Ptr<Event> event, NiChanges *ni) const;
+  /**
+   * Calculate SNR (linear ratio) from the given signal power and noise+interference power.
+   *
+   * \param signal signal power, W
+   * \param noiseInterference noise and interference power, W
+   * \param channelWidth signal width in MHz
+   *
+   * \return SNR in linear ratio
+   */
+  double CalculateSnr (double signal, double noiseInterference, WifiTxVector mode) const;
+  /**
+   * Calculate the success rate of the chunk given the SINR, duration, and Wi-Fi mode.
+   * The duration and mode are used to calculate how many bits are present in the chunk.
+   *
+   * \param snir SINR
+   * \param duration
+   * \param mode
+   * \param txVector
+   *
+   * \return the success rate
+   */
+  double CalculateChunkSuccessRate (double snir, Time duration, WifiMode mode, WifiTxVector txVector) const;
 
-    /**
-     * Append the given Event.
-     *
-     * \param event the event to be appended
-     * \param isStartHePortionRxing flag whether event corresponds to the start of the HE portion
-     * reception (only used for MU)
-     */
-    void AppendEvent(Ptr<Event> event, bool isStartHePortionRxing);
+  /**
+   * \brief Calculate noise floor.
+   * \param mode Wifi mode.
+   * \returns Noise floor (W).
+   */
 
-    /**
-     * Calculate noise and interference power in W.
-     *
-     * \param event the event
-     * \param nis the NiChanges
-     * \param band the band
-     *
-     * \return noise and interference power
-     */
-    double CalculateNoiseInterferenceW(Ptr<Event> event,
-                                       NiChangesPerBand& nis,
-                                       const WifiSpectrumBandInfo& band) const;
+  double CalculateNoiseFloor (WifiTxVector mode) const;
+  double CalculatePacketRss (Ptr<const Event> event, NiChanges *ni) const;
+  /**
+   * Calculate the error rate of the given PLCP payload only in the provided time
+   * window (thus enabling per MPDU PER information). The PLCP payload can be divided into
+   * multiple chunks (e.g. due to interference from other transmissions).
+   *
+   * \param event
+   * \param ni
+   * \param window time window (pair of start and end times) of PLCP payload to focus on
+   *
+   * \return the error rate of the payload
+   */
+  double CalculatePayloadPer (Ptr<const Event> event, NiChanges *ni, std::pair<Time, Time> window) const;
+  /**
+   * Calculate the error rate of the legacy PHY header. The legacy PHY header
+   * can be divided into multiple chunks (e.g. due to interference from other transmissions).
+   *
+   * \param event
+   * \param ni
+   *
+   * \return the error rate of the legacy PHY header
+   */
+  double CalculateLegacyPhyHeaderPer (Ptr<const Event> event, NiChanges *ni) const;
+  /**
+   * Calculate the error rate of the non-legacy PHY header. The non-legacy PHY header
+   * can be divided into multiple chunks (e.g. due to interference from other transmissions).
+   *
+   * \param event
+   * \param ni
+   *
+   * \return the error rate of the non-legacy PHY header
+   */
+  double CalculateNonLegacyPhyHeaderPer (Ptr<const Event> event, NiChanges *ni) const;
 
-    /**
-     * Calculate power of all other events preceding a given event that belong to the same MU-MIMO
-     * transmission.
-     *
-     * \param event the event
-     * \param band the band
-     *
-     * \return the power of all other events preceding the event that belong to the same MU-MIMO
-     * transmission
-     */
-    double CalculateMuMimoPowerW(Ptr<const Event> event, const WifiSpectrumBandInfo& band) const;
+  double CalculatePer (Ptr<const Event> event, NiChanges *ni) const;
 
-    /**
-     * Calculate the error rate of the given PHY payload only in the provided time
-     * window (thus enabling per MPDU PER information). The PHY payload can be divided into
-     * multiple chunks (e.g. due to interference from other transmissions).
-     *
-     * \param event the event
-     * \param channelWidth the channel width used to transmit the PSDU (in MHz)
-     * \param nis the NiChanges
-     * \param band identify the band used by the PSDU
-     * \param staId the station ID of the PSDU (only used for MU)
-     * \param window time window (pair of start and end times) of PHY payload to focus on
-     *
-     * \return the error rate of the payload
-     */
-    double CalculatePayloadPer(Ptr<const Event> event,
-                               uint16_t channelWidth,
-                               NiChangesPerBand* nis,
-                               const WifiSpectrumBandInfo& band,
-                               uint16_t staId,
-                               std::pair<Time, Time> window) const;
-    /**
-     * Calculate the error rate of the PHY header. The PHY header
-     * can be divided into multiple chunks (e.g. due to interference from other transmissions).
-     *
-     * \param event the event
-     * \param nis the NiChanges
-     * \param channelWidth the channel width (in MHz) for header measurement
-     * \param band the band
-     * \param header the PHY header to consider
-     *
-     * \return the error rate of the HT PHY header
-     */
-    double CalculatePhyHeaderPer(Ptr<const Event> event,
-                                 NiChangesPerBand* nis,
-                                 uint16_t channelWidth,
-                                 const WifiSpectrumBandInfo& band,
-                                 WifiPpduField header) const;
-    /**
-     * Calculate the success rate of the PHY header sections for the provided event.
-     *
-     * \param event the event
-     * \param nis the NiChanges
-     * \param channelWidth the channel width (in MHz) for header measurement
-     * \param band the band
-     * \param phyHeaderSections the map of PHY header sections (\see PhyEntity::PhyHeaderSections)
-     *
-     * \return the success rate of the PHY header sections
-     */
-    double CalculatePhyHeaderSectionPsr(Ptr<const Event> event,
-                                        NiChangesPerBand* nis,
-                                        uint16_t channelWidth,
-                                        const WifiSpectrumBandInfo& band,
-                                        PhyEntity::PhyHeaderSections phyHeaderSections) const;
+  double m_noiseFigure; /**< noise figure (linear) */
+  Ptr<ErrorRateModel> m_errorRateModel; ///< error rate model
+  uint8_t m_numRxAntennas; /**< the number of RX antennas in the corresponding receiver */
+  /// Experimental: needed for energy duration calculation
+  NiChanges m_niChanges;
+  double m_firstPower; ///< first power
+  bool m_rxing; ///< flag whether it is in receiving state
 
-    double m_noiseFigure;                 //!< noise figure (linear)
-    Ptr<ErrorRateModel> m_errorRateModel; //!< error rate model
-    uint8_t m_numRxAntennas;         //!< the number of RX antennas in the corresponding receiver
-    NiChangesPerBand m_niChanges;    //!< NI Changes for each band
-    FirstPowerPerBand m_firstPowers; //!< first power of each band in watts
-    bool m_rxing;                    //!< flag whether it is in receiving state
+  NiChanges::iterator GetPosition (Time moment);
+  /**
+   * Returns an iterator to the first nichange that is later than moment
+   *
+   * \param moment time to check from
+   * \returns an iterator to the list of NiChanges
+   */
+  NiChanges::const_iterator GetNextPosition (Time moment) const;
+  /**
+   * Returns an iterator to the first nichange that is later than moment
+   *
+   * \param moment time to check from
+   * \returns an iterator to the list of NiChanges
+   */
+  //NiChanges::iterator GetNextPosition (Time moment);
+  /**
+   * Returns an iterator to the last nichange that is before than moment
+   *
+   * \param moment time to check from
+   * \returns an iterator to the list of NiChanges
+   */
+  NiChanges::const_iterator GetPreviousPosition (Time moment) const;
 
-    /**
-     * Returns an iterator to the first NiChange that is later than moment
-     *
-     * \param moment time to check from
-     * \param niIt iterator of the band to check
-     * \returns an iterator to the list of NiChanges
-     */
-    NiChanges::iterator GetNextPosition(Time moment, NiChangesPerBand::iterator niIt);
-    /**
-     * Returns an iterator to the last NiChange that is before than moment
-     *
-     * \param moment time to check from
-     * \param niIt iterator of the band to check
-     * \returns an iterator to the list of NiChanges
-     */
-    NiChanges::iterator GetPreviousPosition(Time moment, NiChangesPerBand::iterator niIt);
+  /**
+   * Add NiChange to the list at the appropriate position and
+   * return the iterator of the new event.
+   *
+   * \param moment
+   * \param change
+   * \returns the iterator of the new event
+   */
+  void AddNiChangeEvent ( NiChange change);
 
-    /**
-     * Add NiChange to the list at the appropriate position and
-     * return the iterator of the new event.
-     *
-     * \param moment time to check from
-     * \param change the NiChange to add
-     * \param niIt iterator of the band to check
-     * \returns the iterator of the new event
-     */
-    NiChanges::iterator AddNiChangeEvent(Time moment,
-                                         NiChange change,
-                                         NiChangesPerBand::iterator niIt);
-
-    /**
-     * Return whether another event is a MU-MIMO event that belongs to the same transmission and to
-     * the same RU.
-     *
-     * \param currentEvent the current event that is being inspected
-     * \param otherEvent the other event to compare against
-     *
-     * \return whether both events belong to the same transmission and to the same RU
-     */
-    bool IsSameMuMimoTransmission(Ptr<const Event> currentEvent, Ptr<const Event> otherEvent) const;
+  
 };
 
-} // namespace ns3
+} //namespace ns3
 
 #endif /* INTERFERENCE_HELPER_H */

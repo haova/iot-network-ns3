@@ -23,15 +23,15 @@ are defined in the file ``replace.txt``.
 Model Description
 *****************
 
-The source code for the new module lives in the directory ``contrib/iotnet``.
+The source code for the new module lives in the directory ``src/iotnet``.
 
 Add here a basic description of what is being modeled.
 
 Design
 ======
 
-Briefly describe the software design of the model and how it fits into
-the existing ns-3 architecture.
+Briefly describe the software design of the model and how it fits into 
+the existing ns-3 architecture. 
 
 Scope and Limitations
 =====================
@@ -94,5 +94,5 @@ Validation
 **********
 
 Describe how the model has been tested/validated.  What tests run in the
-test suite?  How much API and code is covered by the tests?  Again,
+test suite?  How much API and code is covered by the tests?  Again, 
 references to outside published work may help here.
