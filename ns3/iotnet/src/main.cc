@@ -1,9 +1,12 @@
 #include "ns3/core-module.h"
-#include "ns3/jamming-module.h"
 #include "ns3/mobility-module.h"
 #include "ns3/energy-module.h"
-#include "ns3/wifi-module.h"
 #include "ns3/internet-module.h"
+#include "ns3/jamming-module.h"
+#include "ns3/wifi-module.h"
+
+#include "ns3/iotnet-helper.h"
+#include "ns3/iotnet-wifi.h"
 
 NS_LOG_COMPONENT_DEFINE("IoTNetworkSimulation");
 
@@ -42,14 +45,13 @@ int main(int argc, char *argv[])
   NS_LOG_UNCOND("Setting something up");
 
   // settings
-  std::string phyMode("DsssRate1Mbps");
   int nodeCount = 3;           // 2 normal [0, 1], 1 jammer [2]
   double distanceToRx = 10.0;  // meters
   double TimeSimulation = 5;   // seconds
   double startTime = 0.0;      // seconds
   double interval = 0.1;       // seconds
   uint32_t PpacketSize = 1000; // bytes
-  uint32_t numPackets = 1;     // number of packets to send
+  uint32_t numPackets = 10;    // number of packets to send
 
   Time interPacketInterval = Seconds(interval);
 
@@ -61,68 +63,33 @@ int main(int argc, char *argv[])
   CommandLine cmd;
   cmd.Parse(argc, argv);
 
-  // node define:
-  NodeContainer c;
-  c.Create(nodeCount);
+  // network define
+  InternetStackHelper internet;
 
-  NodeContainer networkNodes;
-  networkNodes.Add(c.Get(0));
-  networkNodes.Add(c.Get(1));
+  IoTNetWifi wifiA("wifi-a", internet, "10.1.1.0", "255.255.255.0");
+  IoTNetNodePack s1 = wifiA.Create("sensor-1", Vector(0.0, 0.0, 0.0));
+  IoTNetNodePack s2 = wifiA.Create("sensor-2", Vector(distanceToRx, 0.1 * distanceToRx, 0.0));
+  IoTNetNodePack j = wifiA.Create("jammer", Vector(2 * distanceToRx, 0.0, 0.0));
 
-  // wifi
-  WifiHelper wifi;
-  wifi.SetStandard(WIFI_PHY_STANDARD_80211b);
+  // old integrate
+  NodeContainer c, networkNodes;
+  c.Add(s1.node);
+  c.Add(s2.node);
+  c.Add(j.node);
+  networkNodes.Add(s1.node);
+  networkNodes.Add(s2.node);
 
-  // wifi phy
-  NslWifiPhyHelper wifiPhy = NslWifiPhyHelper::Default();
-
-  // wifi channel
-  NslWifiChannelHelper wifiChannel;
-  wifiChannel.SetPropagationDelay("ns3::ConstantSpeedPropagationDelayModel");
-  wifiChannel.AddPropagationLoss("ns3::FriisPropagationLossModel");
-  wifiPhy.SetChannel(wifiChannel.Create());
-
-  // mac layer
-  WifiMacHelper wifiMac = WifiMacHelper();
-  wifi.SetRemoteStationManager("ns3::ConstantRateWifiManager", "DataMode",
-                               StringValue(phyMode), "ControlMode", StringValue(phyMode));
-
-  // adhoc network
-  wifiMac.SetType("ns3::AdhocWifiMac");
-
-  // phy + mac + normal
-  NetDeviceContainer devices = wifi.Install(wifiPhy, wifiMac, networkNodes);
-
-  // phy + mac + jammer
-  NetDeviceContainer jammerNetdevice = wifi.Install(wifiPhy, wifiMac, c.Get(nodeCount - 1));
-
-  // mobility
-  MobilityHelper mobility;
-  Ptr<ListPositionAllocator> positionAlloc = CreateObject<ListPositionAllocator>();
-  positionAlloc->Add(Vector(0.0, 0.0, 0.0));                         // node 0
-  positionAlloc->Add(Vector(distanceToRx, 0.1 * distanceToRx, 0.0)); // node 1
-  positionAlloc->Add(Vector(2 * distanceToRx, 0.0, 0.0));            // node 2
-
-  mobility.SetPositionAllocator(positionAlloc);
-  mobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
-  mobility.Install(c);
-
-  // energy
-  BasicEnergySourceHelper basicSourceHelper;
-  basicSourceHelper.Set("BasicEnergySourceInitialEnergyJ", DoubleValue(25.0));
-  EnergySourceContainer energySources = basicSourceHelper.Install(c);
-  WifiRadioEnergyModelHelper radioEnergyHelper;
-  radioEnergyHelper.Set("TxCurrentA", DoubleValue(0.0174));
-
-  DeviceEnergyModelContainer deviceModels = radioEnergyHelper.Install(devices, energySources);
-  DeviceEnergyModelContainer jammerDeviceModels = radioEnergyHelper.Install(jammerNetdevice.Get(0), energySources.Get(nodeCount - 1));
+  NetDeviceContainer devices, jammerNetdevice;
+  devices.Add(s1.device);
+  devices.Add(s2.device);
+  jammerNetdevice.Add(j.device);
 
   // wireless utility
   WirelessModuleUtilityHelper utilityHelper;
   std::vector<std::string> AllInclusionList;
   std::vector<std::string> AllExclusionList;
-  AllInclusionList.push_back("ns3::UdpHeader");          // record only UdpHeader
-  AllExclusionList.push_back("ns3::olsr::PacketHeader"); // ignore all olsr headers/trailers
+  // AllInclusionList.push_back("ns3::UdpHeader");          // record only UdpHeader
+  // AllExclusionList.push_back("ns3::olsr::PacketHeader"); // ignore all olsr headers/trailers
   utilityHelper.SetInclusionList(AllInclusionList);
   utilityHelper.SetExclusionList(AllExclusionList);
   WirelessModuleUtilityContainer utilities = utilityHelper.InstallAll();
@@ -148,13 +115,6 @@ int main(int argc, char *argv[])
   Ptr<JammingMitigation> mitigationPtr2 = mitigators.Get(0);                      // node 0
 
   // internet
-  InternetStackHelper internet;
-  internet.Install(networkNodes);
-
-  Ipv4AddressHelper ipv4;
-  ipv4.SetBase("10.1.1.0", "255.255.255.0");
-  Ipv4InterfaceContainer ipv4Interface = ipv4.Assign(devices);
-
   TypeId tid = TypeId::LookupByName("ns3::UdpSocketFactory");
   Ptr<Socket> recvSink = Socket::CreateSocket(networkNodes.Get(1), tid); // node 1 - receiver
   InetSocketAddress local = InetSocketAddress(Ipv4Address::GetAny(), 80);

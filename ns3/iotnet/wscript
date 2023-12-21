@@ -10,6 +10,7 @@ def build(bld):
     module = bld.create_ns3_module('iotnet', ['core'])
     module.source = [
         'model/iotnet.cc',
+        'model/iotnet-wifi.cc',
         'helper/iotnet-helper.cc',
         ]
 
@@ -22,6 +23,7 @@ def build(bld):
     headers.module = 'iotnet'
     headers.source = [
         'model/iotnet.h',
+        'model/iotnet-wifi.h',
         'helper/iotnet-helper.h',
         ]
 

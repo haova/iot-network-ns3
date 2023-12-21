@@ -4,11 +4,8 @@
 
 #include "ns3/iotnet.h"
 
-namespace ns3 {
-
-/* ... */
-
+namespace ns3
+{
 }
 
 #endif /* IOTNET_HELPER_H */
-

@@ -40,6 +40,8 @@ docker compose up
 
 ## Simulation Network
 
+### Guide
+
 Access docker container.
 
 ```bash
@@ -57,6 +59,12 @@ or
 ```bash
 docker exec -it iotnet-ns3 /root/ns-allinone-3.30.1/ns-3.30.1/waf --run scratch/iotnet/iotnet
 ```
+
+### Classes
+
+**IoTNetWifi**
+
+Định nghĩa một mạng wifi nội bộ.
 
 ## Web Application Server
 

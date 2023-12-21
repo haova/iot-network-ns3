@@ -2,10 +2,6 @@
 
 #include "iotnet-helper.h"
 
-namespace ns3 {
-
-/* ... */
-
-
+namespace ns3
+{
 }
-
