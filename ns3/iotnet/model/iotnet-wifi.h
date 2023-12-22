@@ -10,26 +10,20 @@
 #include "ns3/node-container.h"
 #include "ns3/wifi-module.h"
 
+#include "ns3/iotnet-node.h"
+
 namespace ns3
 {
-  class IoTNetNodePack : public Object
-  {
-  public:
-    std::string id;
-    Vector position;
-    NodeContainer node;
-    NetDeviceContainer device;
-  };
-
   class IoTNetWifi
   {
   public:
     IoTNetWifi(const std::string id, const InternetStackHelper internet, const Ipv4Address network, const Ipv4Mask mask);
-    Ptr<IoTNetNodePack> Create(std::string id, Vector position);
+    Ptr<IoTNetNode> Create(std::string id, Vector position);
     void Install();
 
   private:
     std::string m_id;
+    Ssid m_ssid;
     NodeContainer m_allNodes;
 
     MobilityHelper m_mobility;
@@ -46,7 +40,7 @@ namespace ns3
     InternetStackHelper m_internet;
     Ipv4AddressHelper m_ipv4;
 
-    std::vector<Ptr<IoTNetNodePack>> m_allPacks;
+    std::vector<Ptr<IoTNetNode>> m_allPacks;
   };
 }
 #endif /* IOTNET_WIFI_H */

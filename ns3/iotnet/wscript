@@ -11,6 +11,7 @@ def build(bld):
     module.source = [
         'model/iotnet.cc',
         'model/iotnet-wifi.cc',
+        'model/iotnet-node.cc',
         'helper/iotnet-helper.cc',
         ]
 
@@ -24,6 +25,7 @@ def build(bld):
     headers.source = [
         'model/iotnet.h',
         'model/iotnet-wifi.h',
+        'model/iotnet-node.h',
         'helper/iotnet-helper.h',
         ]
 

@@ -5,6 +5,7 @@
 #include "ns3/jamming-module.h"
 #include "ns3/netanim-module.h"
 #include "ns3/wifi-module.h"
+#include "ns3/applications-module.h"
 
 #include "ns3/iotnet-helper.h"
 #include "ns3/iotnet-wifi.h"
@@ -41,18 +42,41 @@ static void GenerateTraffic(Ptr<Socket> socket, uint32_t pktSize, Ptr<Node> n, u
   }
 }
 
+void NodeRss(Ptr<WirelessModuleUtility> utilitySend, double time)
+{
+  Time t = Simulator::Now();
+  double rss = utilitySend->GetRss();
+  NS_LOG_UNCOND(Simulator::Now().GetSeconds() << "s Node RSS = " << rss << "W");
+  if (t.GetSeconds() < time)
+  {
+    Simulator::Schedule(Seconds(0.2), &NodeRss, utilitySend, time);
+  }
+}
+
+void NodePdr(Ptr<WirelessModuleUtility> utilitySend, double time)
+{
+  Time t = Simulator::Now();
+  double pdr = utilitySend->GetPdr();
+  NS_LOG_UNCOND(Simulator::Now().GetSeconds() << "s Node PDR = " << pdr);
+
+  if (t.GetSeconds() < time)
+  {
+    Simulator::Schedule(Seconds(0.2), &NodePdr, utilitySend, time);
+  }
+}
+
 int main(int argc, char *argv[])
 {
   NS_LOG_UNCOND("Setting something up");
 
   // settings
-  int nodeCount = 3;           // 2 normal [0, 1], 1 jammer [2]
-  double distanceToRx = 10.0;  // meters
-  double TimeSimulation = 10;  // seconds
-  double startTime = 0.0;      // seconds
-  double interval = 1.0;       // seconds
-  uint32_t PpacketSize = 1000; // bytes
-  uint32_t numPackets = 10;    // number of packets to send
+  int nodeCount = 3;          // 2 normal [0, 1], 1 jammer [2]
+  double distanceToRx = 10.0; // meters
+  double TimeSimulation = 2;  // seconds
+  // double startTime = 1.0;      // seconds
+  double interval = 0.1; // seconds
+  // uint32_t PpacketSize = 1000; // bytes
+  // uint32_t numPackets = 5;     // number of packets to send
 
   Time interPacketInterval = Seconds(interval);
 
@@ -68,9 +92,9 @@ int main(int argc, char *argv[])
   InternetStackHelper internet;
 
   IoTNetWifi wifiA("wifi-a", internet, "10.1.1.0", "255.255.255.0");
-  Ptr<IoTNetNodePack> s1 = wifiA.Create("sensor-1", Vector(0.0, 0.0, 0.0));
-  Ptr<IoTNetNodePack> s2 = wifiA.Create("sensor-2", Vector(distanceToRx, 0.1 * distanceToRx, 0.0));
-  Ptr<IoTNetNodePack> j = wifiA.Create("jammer", Vector(2 * distanceToRx, 0.0, 0.0));
+  Ptr<IoTNetNode> s1 = wifiA.Create("sensor-1", Vector(0.0, 0.0, 0.0));
+  Ptr<IoTNetNode> s2 = wifiA.Create("sensor-2", Vector(distanceToRx, 0.1 * distanceToRx, 0.0));
+  Ptr<IoTNetNode> j = wifiA.Create("jammer", Vector(2 * distanceToRx, 0.0, 0.0));
   wifiA.Install();
 
   // old integrate
@@ -86,32 +110,18 @@ int main(int argc, char *argv[])
   devices.Add(s2->device);
   jammerNetdevice.Add(j->device);
 
-  // mobility
-  // MobilityHelper mobility;
-  // Ptr<ListPositionAllocator> positionAlloc =
-  //     CreateObject<ListPositionAllocator>();
-  // // assign position to node
-  // positionAlloc->Add(Vector(0.0, 0.0, 0.0));
-  // positionAlloc->Add(Vector(distanceToRx, 0.1 * distanceToRx, 0.0));
-  // positionAlloc->Add(Vector(2 * distanceToRx, 0.0, 0.0));
-  // // positionAlloc->Add (Vector (3 * distanceToRx, 0.1 * distanceToRx, 0.0));
-  // // positionAlloc->Add (Vector (2 * distanceToRx, -0.5 * distanceToRx, 0.0)); // jammer location
-  // mobility.SetPositionAllocator(positionAlloc);
-  // mobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
-  // mobility.Install(c);
-
   // wireless utility
   WirelessModuleUtilityHelper utilityHelper;
   std::vector<std::string> AllInclusionList;
   std::vector<std::string> AllExclusionList;
-  // AllInclusionList.push_back("ns3::UdpHeader");          // record only UdpHeader
-  // AllExclusionList.push_back("ns3::olsr::PacketHeader"); // ignore all olsr headers/trailers
+  AllInclusionList.push_back("ns3::UdpHeader");          // record only UdpHeader
+  AllExclusionList.push_back("ns3::olsr::PacketHeader"); // ignore all olsr headers/trailers
   utilityHelper.SetInclusionList(AllInclusionList);
   utilityHelper.SetExclusionList(AllExclusionList);
   WirelessModuleUtilityContainer utilities = utilityHelper.InstallAll();
 
-  Ptr<WirelessModuleUtility> utilitySend = utilities.Get(0); // node 0
-  Ptr<WirelessModuleUtility> utilityPtr = utilities.Get(1);  // node 1
+  Ptr<WirelessModuleUtility> utilitySend = utilities.Get(0);    // node 0
+  Ptr<WirelessModuleUtility> utilityReceive = utilities.Get(1); // node 1
 
   // jammer
   JammerHelper jammerHelper;
@@ -130,26 +140,52 @@ int main(int argc, char *argv[])
   Ptr<JammingMitigation> mitigationPtr = mitigators.Get(1);                       // node 1
   Ptr<JammingMitigation> mitigationPtr2 = mitigators.Get(0);                      // node 0
 
-  // internet
-  TypeId tid = TypeId::LookupByName("ns3::UdpSocketFactory");
-  Ptr<Socket> recvSink = Socket::CreateSocket(networkNodes.Get(1), tid); // node 1 - receiver
-  InetSocketAddress local = InetSocketAddress(Ipv4Address::GetAny(), 80);
-  recvSink->Bind(local);
-  recvSink->SetRecvCallback(MakeCallback(&ReceivePacket));
+  // application
+  // TypeId tid = TypeId::LookupByName("ns3::UdpSocketFactory");
+  // Ptr<Socket> recvSink = Socket::CreateSocket(networkNodes.Get(1), tid); // node 1 - receiver
+  // InetSocketAddress local = InetSocketAddress(Ipv4Address::GetAny(), 80);
+  // recvSink->Bind(local);
+  // recvSink->SetRecvCallback(MakeCallback(&ReceivePacket));
 
-  Ptr<Socket> source = Socket::CreateSocket(networkNodes.Get(0), tid); // node 0 - sender
-  InetSocketAddress remote = InetSocketAddress(Ipv4Address::GetBroadcast(), 80);
-  source->SetAllowBroadcast(true);
-  source->Connect(remote);
+  // Ptr<Socket> source = Socket::CreateSocket(networkNodes.Get(0), tid); // node 0 - sender
+  // InetSocketAddress remote = InetSocketAddress(Ipv4Address::GetBroadcast(), 80);
+  // source->SetAllowBroadcast(true);
+  // source->Connect(remote);
+
+  UdpEchoServerHelper echoServer(9);
+
+  ApplicationContainer serverApps = echoServer.Install(s1->node);
+  serverApps.Start(Seconds(1.0));
+  serverApps.Stop(Seconds(10.0));
+
+  UdpEchoClientHelper echoClient(s1->interface.GetAddress(0), 9);
+  echoClient.SetAttribute("MaxPackets", UintegerValue(1));
+  echoClient.SetAttribute("Interval", TimeValue(Seconds(1.0)));
+  echoClient.SetAttribute("PacketSize", UintegerValue(1024));
+
+  ApplicationContainer clientApps =
+      echoClient.Install(s2->node);
+  clientApps.Start(Seconds(2.0));
+  clientApps.Stop(Seconds(10.0));
+
+  Ipv4GlobalRoutingHelper::PopulateRoutingTables();
 
   // animation
   AnimationInterface anim("output/iotnet-anim.xml");
   anim.EnablePacketMetadata();
 
   // schedule
-  Simulator::Schedule(Seconds(startTime), &GenerateTraffic, source,
-                      PpacketSize, networkNodes.Get(0), numPackets,
-                      interPacketInterval);
+  Simulator::Schedule(Seconds(1.3), &ns3::Jammer::StartJammer, jammerPtr); // start jammer at 7s
+
+  // Simulator::Schedule(Seconds(0.1), NodePdr, utilitySend, TimeSimulation);
+  // Simulator::Schedule(Seconds(0.1), NodePdr, utilityReceive, TimeSimulation);
+
+  // Simulator::Schedule(Seconds(0.1), NodeRss, utilitySend, TimeSimulation);
+  // Simulator::Schedule(Seconds(0.1), NodeRss, utilityReceive, TimeSimulation);
+
+  // Simulator::Schedule(Seconds(startTime), &GenerateTraffic, source,
+  //                     PpacketSize, networkNodes.Get(0), numPackets,
+  //                     interPacketInterval);
 
   // simulation
   NS_LOG_UNCOND(">> Start simulation");
@@ -159,11 +195,10 @@ int main(int argc, char *argv[])
   NS_LOG_UNCOND("<< Stop simulation");
 
   // information
-  uint32_t actualPdr = utilityPtr->GetTotalPkts();      // node 1 - receiver
-  uint32_t actualSend = utilitySend->GetTotalBytesTx(); // node 0 - sender
-
-  NS_LOG_UNCOND("Actual Bytes Send = " << actualSend);
-  NS_LOG_UNCOND("Actual PDR = " << actualPdr);
+  NS_LOG_UNCOND("PDR = " << utilityReceive->GetPdr());
+  NS_LOG_UNCOND("Receiver = " << utilityReceive->GetValidPkts() << "/" << utilityReceive->GetTotalPkts());
+  NS_LOG_UNCOND("Total Byte Received = " << utilityReceive->GetTotalBytesRx());
+  NS_LOG_UNCOND("Total Byte Sent = " << utilitySend->GetTotalBytesTx());
 
   return 0;
 }
