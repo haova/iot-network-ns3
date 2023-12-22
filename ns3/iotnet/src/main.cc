@@ -3,6 +3,7 @@
 #include "ns3/energy-module.h"
 #include "ns3/internet-module.h"
 #include "ns3/jamming-module.h"
+#include "ns3/netanim-module.h"
 #include "ns3/wifi-module.h"
 
 #include "ns3/iotnet-helper.h"
@@ -47,9 +48,9 @@ int main(int argc, char *argv[])
   // settings
   int nodeCount = 3;           // 2 normal [0, 1], 1 jammer [2]
   double distanceToRx = 10.0;  // meters
-  double TimeSimulation = 5;   // seconds
+  double TimeSimulation = 10;  // seconds
   double startTime = 0.0;      // seconds
-  double interval = 0.1;       // seconds
+  double interval = 1.0;       // seconds
   uint32_t PpacketSize = 1000; // bytes
   uint32_t numPackets = 10;    // number of packets to send
 
@@ -67,22 +68,37 @@ int main(int argc, char *argv[])
   InternetStackHelper internet;
 
   IoTNetWifi wifiA("wifi-a", internet, "10.1.1.0", "255.255.255.0");
-  IoTNetNodePack s1 = wifiA.Create("sensor-1", Vector(0.0, 0.0, 0.0));
-  IoTNetNodePack s2 = wifiA.Create("sensor-2", Vector(distanceToRx, 0.1 * distanceToRx, 0.0));
-  IoTNetNodePack j = wifiA.Create("jammer", Vector(2 * distanceToRx, 0.0, 0.0));
+  Ptr<IoTNetNodePack> s1 = wifiA.Create("sensor-1", Vector(0.0, 0.0, 0.0));
+  Ptr<IoTNetNodePack> s2 = wifiA.Create("sensor-2", Vector(distanceToRx, 0.1 * distanceToRx, 0.0));
+  Ptr<IoTNetNodePack> j = wifiA.Create("jammer", Vector(2 * distanceToRx, 0.0, 0.0));
+  wifiA.Install();
 
   // old integrate
   NodeContainer c, networkNodes;
-  c.Add(s1.node);
-  c.Add(s2.node);
-  c.Add(j.node);
-  networkNodes.Add(s1.node);
-  networkNodes.Add(s2.node);
+  c.Add(s1->node);
+  c.Add(s2->node);
+  c.Add(j->node);
+  networkNodes.Add(s1->node);
+  networkNodes.Add(s2->node);
 
   NetDeviceContainer devices, jammerNetdevice;
-  devices.Add(s1.device);
-  devices.Add(s2.device);
-  jammerNetdevice.Add(j.device);
+  devices.Add(s1->device);
+  devices.Add(s2->device);
+  jammerNetdevice.Add(j->device);
+
+  // mobility
+  // MobilityHelper mobility;
+  // Ptr<ListPositionAllocator> positionAlloc =
+  //     CreateObject<ListPositionAllocator>();
+  // // assign position to node
+  // positionAlloc->Add(Vector(0.0, 0.0, 0.0));
+  // positionAlloc->Add(Vector(distanceToRx, 0.1 * distanceToRx, 0.0));
+  // positionAlloc->Add(Vector(2 * distanceToRx, 0.0, 0.0));
+  // // positionAlloc->Add (Vector (3 * distanceToRx, 0.1 * distanceToRx, 0.0));
+  // // positionAlloc->Add (Vector (2 * distanceToRx, -0.5 * distanceToRx, 0.0)); // jammer location
+  // mobility.SetPositionAllocator(positionAlloc);
+  // mobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
+  // mobility.Install(c);
 
   // wireless utility
   WirelessModuleUtilityHelper utilityHelper;
@@ -125,6 +141,10 @@ int main(int argc, char *argv[])
   InetSocketAddress remote = InetSocketAddress(Ipv4Address::GetBroadcast(), 80);
   source->SetAllowBroadcast(true);
   source->Connect(remote);
+
+  // animation
+  AnimationInterface anim("output/iotnet-anim.xml");
+  anim.EnablePacketMetadata();
 
   // schedule
   Simulator::Schedule(Seconds(startTime), &GenerateTraffic, source,

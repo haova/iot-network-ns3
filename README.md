@@ -32,6 +32,12 @@ $
 - Docker CE
 - Docker Compose
 
+```bash
+sudo apt-get install mercurial
+sudo apt install g++ python3 cmake ninja-build git
+sudo apt install qtbase5-dev qtchooser qt5-qmake qtbase5-dev-tools
+```
+
 ## Setup
 
 ```bash
@@ -74,6 +80,16 @@ Run Real Server
 docker exec -it server-node /bin/bash
 npm i
 npm run dev
+```
+
+### NetAnim
+
+```bash
+cd netanim
+make clean
+qmake NetAnim.pro
+make
+./NetAnim
 ```
 
 ## Tshark

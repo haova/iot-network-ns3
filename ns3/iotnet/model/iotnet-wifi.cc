@@ -30,8 +30,6 @@ namespace ns3
 
     // mobility
     m_positionAlloc = CreateObject<ListPositionAllocator>();
-    m_mobility.SetPositionAllocator(m_positionAlloc);
-    m_mobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
 
     // energy
     m_basicSourceHelper.Set("BasicEnergySourceInitialEnergyJ", DoubleValue(25.0));
@@ -42,30 +40,41 @@ namespace ns3
     m_ipv4.SetBase(network, mask);
   }
 
-  IoTNetNodePack IoTNetWifi::Create(std::string id, Vector position)
+  Ptr<IoTNetNodePack> IoTNetWifi::Create(std::string id, Vector position)
   {
-    IoTNetNodePack pack;
-    pack.id = id;
+    Ptr<IoTNetNodePack> pack = CreateObject<IoTNetNodePack>();
+    pack->id = id;
+    pack->position = position;
 
     // create node
-    pack.node.Create(1);
-    m_allNodes.Add(pack.node);
+    pack->node.Create(1);
+    m_allNodes.Add(pack->node);
 
     // mobility
-    m_positionAlloc->Add(position);
-    m_mobility.Install(pack.node);
+    m_positionAlloc->Add(pack->position);
 
     // device = phy + mac + node
-    pack.device = m_wifi.Install(m_wifiPhy, m_wifiMac, pack.node);
+    pack->device = m_wifi.Install(m_wifiPhy, m_wifiMac, pack->node);
 
     // energy
-    EnergySourceContainer energySource = m_basicSourceHelper.Install(pack.node);
-    DeviceEnergyModelContainer deviceEnergyModel = m_radioEnergyHelper.Install(pack.device, energySource);
+    EnergySourceContainer energySource = m_basicSourceHelper.Install(pack->node);
+    DeviceEnergyModelContainer deviceEnergyModel = m_radioEnergyHelper.Install(pack->device, energySource);
 
     // ip
-    m_internet.Install(pack.node);
-    Ipv4InterfaceContainer ipv4Interface = m_ipv4.Assign(pack.device);
+    m_internet.Install(pack->node);
+    Ipv4InterfaceContainer ipv4Interface = m_ipv4.Assign(pack->device);
+
+    // append to vector
+    m_allPacks.push_back(pack);
 
     return pack;
+  }
+
+  void IoTNetWifi::Install()
+  {
+    // mobility
+    m_mobility.SetPositionAllocator(m_positionAlloc);
+    m_mobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
+    m_mobility.Install(m_allNodes);
   }
 }

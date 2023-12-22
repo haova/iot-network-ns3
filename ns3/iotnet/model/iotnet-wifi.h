@@ -12,9 +12,11 @@
 
 namespace ns3
 {
-  struct IoTNetNodePack
+  class IoTNetNodePack : public Object
   {
+  public:
     std::string id;
+    Vector position;
     NodeContainer node;
     NetDeviceContainer device;
   };
@@ -23,7 +25,8 @@ namespace ns3
   {
   public:
     IoTNetWifi(const std::string id, const InternetStackHelper internet, const Ipv4Address network, const Ipv4Mask mask);
-    IoTNetNodePack Create(std::string id, Vector position);
+    Ptr<IoTNetNodePack> Create(std::string id, Vector position);
+    void Install();
 
   private:
     std::string m_id;
@@ -42,6 +45,8 @@ namespace ns3
 
     InternetStackHelper m_internet;
     Ipv4AddressHelper m_ipv4;
+
+    std::vector<Ptr<IoTNetNodePack>> m_allPacks;
   };
 }
 #endif /* IOTNET_WIFI_H */
