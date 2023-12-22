@@ -3,12 +3,14 @@
 #include "ns3/energy-module.h"
 #include "ns3/internet-module.h"
 #include "ns3/jamming-module.h"
-#include "ns3/netanim-module.h"
 #include "ns3/wifi-module.h"
 #include "ns3/applications-module.h"
+#include "ns3/netanim-module.h"
 
+#include "ns3/iotnet.h"
 #include "ns3/iotnet-helper.h"
 #include "ns3/iotnet-wifi.h"
+#include "ns3/iotnet-server.h"
 
 NS_LOG_COMPONENT_DEFINE("IoTNetworkSimulation");
 
@@ -70,13 +72,9 @@ int main(int argc, char *argv[])
   NS_LOG_UNCOND("Setting something up");
 
   // settings
-  int nodeCount = 3;          // 2 normal [0, 1], 1 jammer [2]
-  double distanceToRx = 10.0; // meters
-  double TimeSimulation = 2;  // seconds
-  // double startTime = 1.0;      // seconds
-  double interval = 0.1; // seconds
-  // uint32_t PpacketSize = 1000; // bytes
-  // uint32_t numPackets = 5;     // number of packets to send
+  int nodeCount = 3;         // 2 normal [0, 1], 1 jammer [2]
+  double TimeSimulation = 2; // seconds
+  double interval = 0.1;     // seconds
 
   Time interPacketInterval = Seconds(interval);
 
@@ -88,14 +86,17 @@ int main(int argc, char *argv[])
   CommandLine cmd;
   cmd.Parse(argc, argv);
 
-  // network define
-  InternetStackHelper internet;
+  // global
+  IoTNet::world = CreateObject<IoTNet>();
 
-  IoTNetWifi wifiA("wifi-a", internet, "10.1.1.0", "255.255.255.0");
-  Ptr<IoTNetNode> s1 = wifiA.Create("sensor-1", Vector(0.0, 0.0, 0.0));
-  Ptr<IoTNetNode> s2 = wifiA.Create("sensor-2", Vector(distanceToRx, 0.1 * distanceToRx, 0.0));
-  Ptr<IoTNetNode> j = wifiA.Create("jammer", Vector(2 * distanceToRx, 0.0, 0.0));
-  wifiA.Install();
+  // server
+  IoTNetServer server("server", "10.1.1.0", "255.255.255.0", Vector(0.0, 0.0, 0.0));
+
+  // wifi network
+  IoTNetWifi wifiA("wifi-a", "10.1.2.0", "255.255.255.0");
+  Ptr<IoTNetNode> s1 = wifiA.Create("sensor-1", Vector(10.0, 10.0, 0.0));
+  Ptr<IoTNetNode> s2 = wifiA.Create("sensor-2", Vector(20.0, 15.0, 0.0));
+  Ptr<IoTNetNode> j = wifiA.Create("jammer", Vector(35.0, 32.0, 0.0));
 
   // old integrate
   NodeContainer c, networkNodes;
@@ -140,39 +141,12 @@ int main(int argc, char *argv[])
   Ptr<JammingMitigation> mitigationPtr = mitigators.Get(1);                       // node 1
   Ptr<JammingMitigation> mitigationPtr2 = mitigators.Get(0);                      // node 0
 
-  // application
-  // TypeId tid = TypeId::LookupByName("ns3::UdpSocketFactory");
-  // Ptr<Socket> recvSink = Socket::CreateSocket(networkNodes.Get(1), tid); // node 1 - receiver
-  // InetSocketAddress local = InetSocketAddress(Ipv4Address::GetAny(), 80);
-  // recvSink->Bind(local);
-  // recvSink->SetRecvCallback(MakeCallback(&ReceivePacket));
+  // Install
+  IoTNet::world->Install();
 
-  // Ptr<Socket> source = Socket::CreateSocket(networkNodes.Get(0), tid); // node 0 - sender
-  // InetSocketAddress remote = InetSocketAddress(Ipv4Address::GetBroadcast(), 80);
-  // source->SetAllowBroadcast(true);
-  // source->Connect(remote);
-
-  UdpEchoServerHelper echoServer(9);
-
-  ApplicationContainer serverApps = echoServer.Install(s1->node);
-  serverApps.Start(Seconds(1.0));
-  serverApps.Stop(Seconds(10.0));
-
-  UdpEchoClientHelper echoClient(s1->interface.GetAddress(0), 9);
-  echoClient.SetAttribute("MaxPackets", UintegerValue(1));
-  echoClient.SetAttribute("Interval", TimeValue(Seconds(1.0)));
-  echoClient.SetAttribute("PacketSize", UintegerValue(1024));
-
-  ApplicationContainer clientApps =
-      echoClient.Install(s2->node);
-  clientApps.Start(Seconds(2.0));
-  clientApps.Stop(Seconds(10.0));
-
-  Ipv4GlobalRoutingHelper::PopulateRoutingTables();
-
-  // animation
   AnimationInterface anim("output/iotnet-anim.xml");
   anim.EnablePacketMetadata();
+  // IoTNet::world->UpdateAnimationInterface(anim);
 
   // schedule
   Simulator::Schedule(Seconds(1.3), &ns3::Jammer::StartJammer, jammerPtr); // start jammer at 7s

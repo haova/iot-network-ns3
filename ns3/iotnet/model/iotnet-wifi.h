@@ -6,10 +6,10 @@
 #include "ns3/energy-module.h"
 #include "ns3/internet-module.h"
 #include "ns3/jamming-module.h"
-#include "ns3/mobility-module.h"
 #include "ns3/node-container.h"
 #include "ns3/wifi-module.h"
 
+#include "ns3/iotnet.h"
 #include "ns3/iotnet-node.h"
 
 namespace ns3
@@ -17,7 +17,7 @@ namespace ns3
   class IoTNetWifi
   {
   public:
-    IoTNetWifi(const std::string id, const InternetStackHelper internet, const Ipv4Address network, const Ipv4Mask mask);
+    IoTNetWifi(const std::string id, const Ipv4Address network, const Ipv4Mask mask);
     Ptr<IoTNetNode> Create(std::string id, Vector position);
     void Install();
 
@@ -25,9 +25,6 @@ namespace ns3
     std::string m_id;
     Ssid m_ssid;
     NodeContainer m_allNodes;
-
-    MobilityHelper m_mobility;
-    Ptr<ListPositionAllocator> m_positionAlloc;
 
     WifiHelper m_wifi;
     NslWifiPhyHelper m_wifiPhy;
@@ -37,7 +34,6 @@ namespace ns3
     BasicEnergySourceHelper m_basicSourceHelper;
     WifiRadioEnergyModelHelper m_radioEnergyHelper;
 
-    InternetStackHelper m_internet;
     Ipv4AddressHelper m_ipv4;
 
     std::vector<Ptr<IoTNetNode>> m_allPacks;

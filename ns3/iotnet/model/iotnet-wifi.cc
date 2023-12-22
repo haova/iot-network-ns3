@@ -4,7 +4,7 @@
 
 namespace ns3
 {
-  IoTNetWifi::IoTNetWifi(const std::string id, InternetStackHelper internet, const Ipv4Address network, const Ipv4Mask mask)
+  IoTNetWifi::IoTNetWifi(const std::string id, const Ipv4Address network, const Ipv4Mask mask)
   {
     // config
     std::string phyMode("OfdmRate6Mbps");
@@ -26,20 +26,11 @@ namespace ns3
     m_wifiMac = WifiMacHelper();
     m_wifi.SetRemoteStationManager("ns3::ConstantRateWifiManager", "DataMode", StringValue(phyMode) /*, "ControlMode", StringValue(phyMode)*/);
 
-    // adhoc network
-    // m_wifiMac.SetType("ns3::AdhocWifiMac");
-    // mac.SetType("ns3::ApWifiMac", "Ssid", SsidValue(ssid));
-    // m_wifiMac.SetType("ns3::StaWifiMac", "Ssid", SsidValue(ssid), "ActiveProbing", BooleanValue(false));
-
-    // mobility
-    m_positionAlloc = CreateObject<ListPositionAllocator>();
-
     // energy
     m_basicSourceHelper.Set("BasicEnergySourceInitialEnergyJ", DoubleValue(25.0));
     m_radioEnergyHelper.Set("TxCurrentA", DoubleValue(0.0174));
 
     // ip
-    m_internet = internet;
     m_ipv4.SetBase(network, mask);
   }
 
@@ -54,9 +45,6 @@ namespace ns3
     // create node
     pack->node.Create(1);
     m_allNodes.Add(pack->node);
-
-    // mobility
-    m_positionAlloc->Add(pack->position);
 
     // device = phy + mac + node
     if (currentIndex == 0) // node 0 always ap
@@ -73,25 +61,15 @@ namespace ns3
     EnergySourceContainer energySource = m_basicSourceHelper.Install(pack->node);
     DeviceEnergyModelContainer deviceEnergyModel = m_radioEnergyHelper.Install(pack->device, energySource);
 
+    // add to world
+    IoTNet::world->Add(id, pack->node, position);
+
     // ip
-    m_internet.Install(pack->node);
     pack->interface = m_ipv4.Assign(pack->device);
 
     // append to vector
     m_allPacks.push_back(pack);
 
-    // tracing
-    // energySource.Get(0)->TraceConnectWithoutContext("RemainingEnergy", MakeCallback(&IoTNetNode::RemainingEnergy, pack));
-    // deviceEnergyModel.Get(0)->TraceConnectWithoutContext("TotalEnergyConsumption", MakeCallback(&IoTNetNode::TotalEnergy, pack));
-
     return pack;
-  }
-
-  void IoTNetWifi::Install()
-  {
-    // mobility
-    m_mobility.SetPositionAllocator(m_positionAlloc);
-    m_mobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
-    m_mobility.Install(m_allNodes);
   }
 }
