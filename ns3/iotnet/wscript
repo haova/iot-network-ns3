@@ -3,8 +3,10 @@
 # def options(opt):
 #     pass
 
-# def configure(conf):
-#     conf.check_nonfatal(header_name='stdint.h', define_name='HAVE_STDINT_H')
+def configure(cfg):
+    cfg.env.append_value('INCLUDES', ["/root/json/include"])
+    cfg.env.append_value('LINKFLAGS', ["-L/root/cpr-1.8.4/build/lib", "-lcpr"])
+    cfg.check_cxx(lib='cpr', uselib_store='CPR', mandatory=True)
 
 def build(bld):
     module = bld.create_ns3_module('iotnet', ['core'])
@@ -13,8 +15,10 @@ def build(bld):
         'model/iotnet-wifi.cc',
         'model/iotnet-node.cc',
         'model/iotnet-server.cc',
+        'model/iotnet-router.cc',
         'helper/iotnet-helper.cc',
         ]
+    module.uselib = ['CPR']
 
     module_test = bld.create_ns3_module_test_library('iotnet')
     module_test.source = [
@@ -28,6 +32,7 @@ def build(bld):
         'model/iotnet-wifi.h',
         'model/iotnet-node.h',
         'model/iotnet-server.h',
+        'model/iotnet-router.h',
         'helper/iotnet-helper.h',
         ]
 

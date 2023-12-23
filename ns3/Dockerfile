@@ -97,6 +97,24 @@ WORKDIR /root/ns-allinone-3.30.1/ns-3.30.1
 RUN ./waf configure --enable-examples --enable-tests
 RUN ./waf build
 
+# build cpr
+WORKDIR /root
+RUN wget https://github.com/libcpr/cpr/archive/refs/tags/1.8.4.tar.gz
+RUN tar -xvzf 1.8.4.tar.gz
+
+WORKDIR /root/cpr-1.8.4
+RUN mkdir build
+
+WORKDIR /root/cpr-1.8.4/build
+RUN cmake .. -DCPR_USE_SYSTEM_CURL=ON
+RUN cmake --build . --parallel
+RUN cmake --install .
+
+# build json
+WORKDIR /root
+RUN wget https://github.com/nlohmann/json/releases/download/v3.7.3/include.zip
+RUN unzip include.zip -d json
+
 # jamming
 WORKDIR /root/ns-allinone-3.30.1/ns-3.30.1
 ADD jamming ./src/jamming
@@ -106,6 +124,7 @@ ADD wifi ./src/wifi
 WORKDIR /root/ns-allinone-3.30.1/ns-3.30.1
 ADD iotnet ./src/iotnet
 RUN ln -s ../src/iotnet/src scratch/iotnet
+RUN cp /root/cpr-1.8.4/build/lib/* build/lib/
 
 # build custom modules
 RUN ./waf configure

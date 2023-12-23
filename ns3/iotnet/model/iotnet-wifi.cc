@@ -1,6 +1,10 @@
 /* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
 
+#include "nlohmann/json.hpp"
+
 #include "iotnet-wifi.h"
+
+using json = nlohmann::json;
 
 namespace ns3
 {
@@ -41,7 +45,7 @@ namespace ns3
     Create(id, position);
 
     // schedule access point
-    Simulator::Schedule(Seconds(1), &IoTNetWifi::GatherInforamtion, this);
+    Simulator::Schedule(Seconds(1), &IoTNetWifi::GatherInformation, this);
   }
 
   Ptr<IoTNetNode> IoTNetWifi::GetAp()
@@ -91,16 +95,28 @@ namespace ns3
     return iotNode;
   }
 
-  void IoTNetWifi::GatherInforamtion()
+  void IoTNetWifi::GatherInformation()
   {
     NS_LOG_UNCOND("Gather information around");
+
+    json payload;
+
+    payload["ap"] = m_id;
+    payload["at"] = Now() * 1000;
+    payload["sensors"] = {};
+
     for (size_t i = 1; i < m_allNodes.GetN(); i++) // except ap
     {
+      Ptr<IoTNetNode> iotNode = m_allIoTNode.at(i);
       Ptr<WirelessModuleUtility> utility = m_allNodes.Get(i)->GetObject<WirelessModuleUtility>();
-      NS_LOG_UNCOND("RSSI of " << m_allIoTNode.at(i)->id << ": " << WToDbm(utility->GetRss()));
-      NS_LOG_UNCOND("PDR of " << m_allIoTNode.at(i)->id << ": " << utility->GetPdr());
+
+      payload["sensors"].push_back({{"name", iotNode->id},
+                                    {"rssi", {WToDbm(utility->GetRss())}},
+                                    {"pdr", {utility->GetPdr()}}});
     }
-    Simulator::Schedule(Seconds(10), &IoTNetWifi::GatherInforamtion, this);
+
+    GetAp()->SendPacket(payload.dump());
+    Simulator::Schedule(Seconds(10), &IoTNetWifi::GatherInformation, this);
   }
 
   double IoTNetWifi::DbmToW(double dBm) const
@@ -112,5 +128,10 @@ namespace ns3
   double IoTNetWifi::WToDbm(double w) const
   {
     return 10.0 * log10(w * 1000.0);
+  }
+
+  std::time_t IoTNetWifi::Now()
+  {
+    return std::time(nullptr);
   }
 }

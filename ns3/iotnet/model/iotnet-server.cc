@@ -4,6 +4,7 @@
 #include "ns3/iotnet.h"
 
 #include "iotnet-server.h"
+#include "cpr/cpr.h"
 
 namespace ns3
 {
@@ -41,11 +42,11 @@ namespace ns3
       std::cout << "Received " << packet->GetSize() << " bytes. Payload: " << payload << std::endl;
 
       // forward to external server
-      // cpr::Response r = cpr::Post(
-      //     cpr::Url{"server-node:3000/api/reading"},
-      //     cpr::Header{{"accept", "application/json"}},
-      //     cpr::Header{{"content-type", "application/json"}},
-      //     cpr::Body{{payload}});
+      cpr::Response r = cpr::Post(
+          cpr::Url{"server-node:3000/api/reading"},
+          cpr::Header{{"accept", "application/json"}},
+          cpr::Header{{"content-type", "application/json"}},
+          cpr::Body{{payload}});
     }
   }
 

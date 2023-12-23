@@ -11,6 +11,7 @@
 #include "ns3/iotnet-helper.h"
 #include "ns3/iotnet-wifi.h"
 #include "ns3/iotnet-server.h"
+#include "ns3/iotnet-router.h"
 
 NS_LOG_COMPONENT_DEFINE("IoTNetworkSimulation");
 
@@ -93,12 +94,23 @@ int main(int argc, char *argv[])
   IoTNetServer server("server", "10.1.1.0", "255.255.255.0", Vector(50.0, 5.0, 0.0));
 
   // wifi network
-  IoTNetWifi wifiPB("wifi-phong-bep", "10.1.2.0", "255.255.255.0", Vector(50.0, 30.0, 0.0));
+  IoTNetWifi wifiPB("wifi-phong-bep", "10.1.3.0", "255.255.255.0", Vector(50.0, 40.0, 0.0));
   Ptr<IoTNetNode> s1 = wifiPB.Create("may-nuoc-nong", Vector(55.0, 25.0, 0.0));
-  Ptr<IoTNetNode> s2 = wifiPB.Create("bep", Vector(45.0, 35.0, 0.0));
+  Ptr<IoTNetNode> s2 = wifiPB.Create("bep", Vector(40.0, 30.0, 0.0));
   Ptr<IoTNetNode> s3 = wifiPB.Create("may-giat", Vector(45.0, 55.0, 0.0));
   Ptr<IoTNetNode> s4 = wifiPB.Create("tu-lanh", Vector(55.0, 55.0, 0.0));
   Ptr<IoTNetNode> j = wifiPB.Create("jammer", Vector(50.0, 50.0, 0.0));
+
+  IoTNetWifi wifiPK("wifi-phong-khach", "10.1.4.0", "255.255.255.0", Vector(15.0, 35.0, 0.0));
+  wifiPK.Create("bong-den", Vector(20.0, 20.0, 0.0));
+  wifiPK.Create("may-lanh", Vector(5.0, 25.0, 0.0));
+  wifiPK.Create("may-hut-bui", Vector(5.0, 45.0, 0.0));
+  wifiPK.Create("tivi", Vector(15.0, 50.0, 0.0));
+
+  IoTNetWifi wifiPN("wifi-phong-ngu", "10.1.5.0", "255.255.255.0", Vector(85.0, 35.0, 0.0));
+  wifiPN.Create("rem-cua", Vector(85.0, 25.0, 0.0));
+  wifiPN.Create("den-ban", Vector(75.0, 35.0, 0.0));
+  wifiPN.Create("dong-ho", Vector(90.0, 40.0, 0.0));
 
   // old integrate
   NodeContainer c, networkNodes;
@@ -108,9 +120,13 @@ int main(int argc, char *argv[])
   networkNodes.Add(s1->node);
   networkNodes.Add(s2->node);
 
+  // router
+  IoTNetRouter router("router", "10.1.2.0", "255.255.255.0", Vector(50.0, 15.0, 0.0));
+  server.Add(router.GetNode());
+
   NodeContainer apNodes;
   apNodes.Add(wifiPB.GetAp()->node);
-  server.Add(apNodes);
+  router.Add(apNodes);
   IoTNet::world->address = server.GetAddress();
 
   NetDeviceContainer devices, jammerNetdevice;

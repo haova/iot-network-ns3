@@ -12,6 +12,8 @@
 #include "ns3/iotnet.h"
 #include "ns3/iotnet-node.h"
 
+#include <ctime>
+
 namespace ns3
 {
   class IoTNetWifi
@@ -23,7 +25,8 @@ namespace ns3
     Ptr<IoTNetNode> Create(std::string id, Vector position);
     Ptr<IoTNetNode> GetAp();
     void Install();
-    void GatherInforamtion();
+    void GatherInformation();
+    std::time_t Now();
 
     double DbmToW(double dBm) const;
     double WToDbm(double w) const;
