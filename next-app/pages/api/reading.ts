@@ -1,6 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import db from '../../lib/db'
-import { Reading } from '../../schemas/Reading'
+import { ReadingsFromAP } from '../../schemas/Reading'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
     const { method } = req
@@ -8,7 +8,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     switch (method) {
         case 'POST':
             try {
-                const response = Reading.safeParse(req.body)
+                const response = ReadingsFromAP.safeParse(req.body)
 
                 if (!response.success) {
                     const { errors } = response.error
@@ -18,13 +18,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                     })
                 }
                 
-                const readings = response.data.pdr.map((pdr, index) => ({
-                    name: response.data.name,
+                const readings = response.data.sensors.flatMap((sensor, sensor_index) => sensor.pdr.map((pdr, index) => ({
+                    ap: response.data.ap,
+                    name: response.data.sensors[sensor_index].name,
                     pdr: pdr,
-                    rss: response.data.rss[index],
+                    rssi: response.data.sensors[sensor_index].rssi[index],
                     at: response.data.at+index,
-                    _id: response.data.name + (response.data.at+index)
-                }))
+                    _id: response.data.ap + response.data.sensors[sensor_index].name + (response.data.at+index)
+                })))
 
                 db.bulkDocs(readings)
 

@@ -25,7 +25,11 @@ app.prepare().then(() => {
             
             ws.send(
                 JSON.stringify({
-                    readings: result.rows,
+                    readings: Object.values(result.rows.reduce((acc, doc) => {
+                        if (doc.doc?.at > (acc[doc.doc?.ap + doc.doc?.name]?.at ?? 0))
+                            acc[doc.doc?.ap + doc.doc?.name] = doc.doc
+                        return acc
+                    }, Object.create(null))),
                 })
             )
         })
@@ -46,7 +50,11 @@ app.prepare().then(() => {
                 
                 ws.send(
                     JSON.stringify({
-                        readings: result.rows,
+                        readings: Object.values(result.rows.reduce((acc, doc) => {
+                            if (doc.doc?.at > (acc[doc.doc?.ap + doc.doc?.name]?.at ?? 0))
+                                acc[doc.doc?.ap + doc.doc?.name] = doc.doc
+                            return acc
+                        }, Object.create(null))),
                     })
                 )
             })

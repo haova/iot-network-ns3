@@ -4,10 +4,11 @@ import { Col, Row, Layout, Table, Alert, Badge } from 'antd/lib'
 
 export default () => {
     const [dataSource, setDataSource] = useState([])
-    const [isWarning, setIsWarning] = useState(false)
+
+    const roundNumber = (num: number) => Math.round((num + Number.EPSILON) * 100) / 100
 
     const tableData = useMemo(
-        () => dataSource.map((item: any) => ({ ...item, updatedAt: new Date(item.at).toLocaleString() })),
+        () => dataSource.map((item: any) => ({ ...item, updatedAt: new Date(item?.at).toLocaleString(), pdr: roundNumber(item?.pdr), rssi: roundNumber(item?.rssi) })),
         [dataSource]
     )
 
@@ -16,11 +17,16 @@ export default () => {
     useEffect(() => {
         ws.onmessage = (event) => {
             const data = JSON.parse(event.data)
-            setDataSource(data.readings.map((item: any) => item.doc))
+            setDataSource(data.readings)
         }
     }, [])
 
     const columns = [
+        {
+            title: 'Access Point',
+            dataIndex: 'ap',
+            key: 'ap',
+        },
         {
             title: 'Sensor Name',
             dataIndex: 'name',
@@ -32,9 +38,9 @@ export default () => {
             key: 'pdr',
         },
         {
-            title: 'RSS',
-            dataIndex: 'rss',
-            key: 'rss',
+            title: 'RSSI',
+            dataIndex: 'rssi',
+            key: 'rssi',
         },
         {
             title: 'Last Updated',

@@ -10,7 +10,7 @@ def predict():
     readings = json.loads(request.data)
     model = joblib.load("model.pkl")
     for r in readings:
-        features = np.array([[r["doc"]["pdr"], r["doc"]["rss"]]])
+        features = np.array([[r["doc"]["pdr"], r["doc"]["rssi"]]])
         r["doc"]["isWarning"] = False
         prediction = model.predict(features)
         if prediction != 0:
