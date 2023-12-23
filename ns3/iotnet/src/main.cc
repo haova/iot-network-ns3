@@ -73,9 +73,9 @@ int main(int argc, char *argv[])
   NS_LOG_UNCOND("Setting something up");
 
   // settings
-  int nodeCount = 3;         // 2 normal [0, 1], 1 jammer [2]
-  double TimeSimulation = 3; // seconds
-  double interval = 0.1;     // seconds
+  int nodeCount = 3;           // 2 normal [0, 1], 1 jammer [2]
+  double TimeSimulation = 120; // seconds
+  double interval = 0.1;       // seconds
 
   Time interPacketInterval = Seconds(interval);
 
@@ -86,6 +86,9 @@ int main(int argc, char *argv[])
   // command
   CommandLine cmd;
   cmd.Parse(argc, argv);
+
+  // realtime
+  GlobalValue::Bind("SimulatorImplementationType", StringValue("ns3::RealtimeSimulatorImpl"));
 
   // global
   IoTNet::world = CreateObject<IoTNet>();
@@ -109,8 +112,8 @@ int main(int argc, char *argv[])
 
   IoTNetWifi wifiPN("wifi-phong-ngu", "10.1.5.0", "255.255.255.0", Vector(85.0, 35.0, 0.0));
   wifiPN.Create("rem-cua", Vector(85.0, 25.0, 0.0));
-  wifiPN.Create("den-ban", Vector(75.0, 35.0, 0.0));
-  wifiPN.Create("dong-ho", Vector(90.0, 40.0, 0.0));
+  wifiPN.Create("den-ban", Vector(75.0, 45.0, 0.0));
+  wifiPN.Create("dong-ho", Vector(90.0, 50.0, 0.0));
 
   // old integrate
   NodeContainer c, networkNodes;
@@ -125,8 +128,11 @@ int main(int argc, char *argv[])
   server.Add(router.GetNode());
 
   NodeContainer apNodes;
+  apNodes.Add(wifiPK.GetAp()->node);
   apNodes.Add(wifiPB.GetAp()->node);
+  apNodes.Add(wifiPN.GetAp()->node);
   router.Add(apNodes);
+
   IoTNet::world->address = server.GetAddress();
 
   NetDeviceContainer devices, jammerNetdevice;
@@ -173,7 +179,7 @@ int main(int argc, char *argv[])
   // IoTNet::world->UpdateAnimationInterface(anim);
 
   // schedule
-  Simulator::Schedule(Seconds(1.3), &ns3::Jammer::StartJammer, jammerPtr); // start jammer at 7s
+  Simulator::Schedule(Seconds(2), &ns3::Jammer::StartJammer, jammerPtr); // start jammer at 7s
 
   // Simulator::Schedule(Seconds(0.1), NodePdr, utilitySend, TimeSimulation);
   // Simulator::Schedule(Seconds(0.1), NodePdr, utilityReceive, TimeSimulation);

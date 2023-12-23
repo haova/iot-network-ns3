@@ -39,7 +39,8 @@ namespace ns3
       // Assuming the payload is a string, you can convert it to a C++ string
       std::string payload(reinterpret_cast<char *>(buffer), packet->GetSize());
 
-      std::cout << "Received " << packet->GetSize() << " bytes. Payload: " << payload << std::endl;
+      NS_LOG_UNCOND("Received " << packet->GetSize() << " bytes. Payload: ");
+      std::cout << payload << std::endl;
 
       // forward to external server
       cpr::Response r = cpr::Post(
@@ -52,7 +53,7 @@ namespace ns3
 
   void IoTNetServer::ConnectionAcceptedCallback(Ptr<Socket> socket, const Address &address)
   {
-    std::cout << "Received connection from " << address << std::endl;
+    NS_LOG_UNCOND("Received connection from " << address << std::endl);
     socket->SetRecvCallback(MakeCallback(&IoTNetServer::DataReceivedCallback, this));
   }
 

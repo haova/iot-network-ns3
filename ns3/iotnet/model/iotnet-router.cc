@@ -12,7 +12,7 @@ namespace ns3
     // create node
     m_node.Create(1);
 
-    // csma
+    // p2p
     p2p.SetDeviceAttribute("DataRate", StringValue("5Mbps"));
     p2p.SetChannelAttribute("Delay", StringValue("2ms"));
 
@@ -23,13 +23,21 @@ namespace ns3
     IoTNet::world->Add(id, m_node, position);
   }
 
-  void IoTNetRouter::Add(NodeContainer node)
+  void IoTNetRouter::Add(NodeContainer nodes)
   {
-    NetDeviceContainer devices = p2p.Install(NodeContainer(m_node, node));
-    Ipv4InterfaceContainer interfaces = m_ipv4.Assign(devices);
+    for (size_t i = 0; i < nodes.GetN(); i++)
+    {
+      NodeContainer group(m_node, nodes.Get(i));
+      NetDeviceContainer devices = p2p.Install(group);
 
-    NS_LOG_UNCOND("Router ip " << interfaces.GetAddress(0));
-    NS_LOG_UNCOND("Next hop ip " << interfaces.GetAddress(1));
+      std::ostringstream subnet;
+      subnet << "10.2." << i + 1 << ".0";
+      m_ipv4.SetBase(subnet.str().c_str(), "255.255.255.0");
+      Ipv4InterfaceContainer interfaces = m_ipv4.Assign(devices);
+
+      NS_LOG_UNCOND("Router ip " << interfaces.GetAddress(0));
+      NS_LOG_UNCOND("Next hop ip " << interfaces.GetAddress(1));
+    }
   }
 
   NodeContainer IoTNetRouter::GetNode()
