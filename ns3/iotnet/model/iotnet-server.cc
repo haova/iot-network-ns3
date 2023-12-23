@@ -38,8 +38,6 @@ namespace ns3
 
       // Assuming the payload is a string, you can convert it to a C++ string
       std::string payload(reinterpret_cast<char *>(buffer), packet->GetSize());
-
-      NS_LOG_UNCOND("Received " << packet->GetSize() << " bytes. Payload: ");
       std::cout << payload << std::endl;
 
       // forward to external server
@@ -53,7 +51,6 @@ namespace ns3
 
   void IoTNetServer::ConnectionAcceptedCallback(Ptr<Socket> socket, const Address &address)
   {
-    NS_LOG_UNCOND("Received connection from " << address << std::endl);
     socket->SetRecvCallback(MakeCallback(&IoTNetServer::DataReceivedCallback, this));
   }
 
@@ -61,9 +58,6 @@ namespace ns3
   {
     NetDeviceContainer devices = p2p.Install(NodeContainer(m_node, node));
     Ipv4InterfaceContainer interfaces = m_ipv4.Assign(devices);
-
-    NS_LOG_UNCOND("Ap ip " << interfaces.GetAddress(0));
-    NS_LOG_UNCOND("Next hop ip " << interfaces.GetAddress(1));
 
     uint16_t sinkPort = 8080;
     m_sinkAddress = Address(InetSocketAddress(interfaces.GetAddress(0), sinkPort));
@@ -73,8 +67,6 @@ namespace ns3
     socket->SetAcceptCallback(MakeNullCallback<bool, Ptr<Socket>, const Address &>(), MakeCallback(&IoTNetServer::ConnectionAcceptedCallback, this));
     socket->Bind(m_sinkAddress);
     socket->Listen();
-
-    NS_LOG_UNCOND("Server address " << m_sinkAddress);
   }
 
   Address IoTNetServer::GetAddress()

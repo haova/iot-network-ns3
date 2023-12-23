@@ -34,9 +34,6 @@ namespace ns3
       subnet << "10.2." << i + 1 << ".0";
       m_ipv4.SetBase(subnet.str().c_str(), "255.255.255.0");
       Ipv4InterfaceContainer interfaces = m_ipv4.Assign(devices);
-
-      NS_LOG_UNCOND("Router ip " << interfaces.GetAddress(0));
-      NS_LOG_UNCOND("Next hop ip " << interfaces.GetAddress(1));
     }
   }
 

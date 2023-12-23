@@ -73,9 +73,12 @@ int main(int argc, char *argv[])
   NS_LOG_UNCOND("Setting something up");
 
   // settings
-  int nodeCount = 3;           // 2 normal [0, 1], 1 jammer [2]
-  double TimeSimulation = 120; // seconds
-  double interval = 0.1;       // seconds
+  int nodeCount = 3;     // 2 normal [0, 1], 1 jammer [2]
+  double duration = 20;  // seconds
+  double interval = 0.1; // seconds
+
+  bool realtime = false;
+  bool jamming = false;
 
   Time interPacketInterval = Seconds(interval);
 
@@ -85,10 +88,16 @@ int main(int argc, char *argv[])
 
   // command
   CommandLine cmd;
+  cmd.AddValue("duration", "Simulate duration", duration);
+  cmd.AddValue("realtime", "Enable realtime mode", realtime);
+  cmd.AddValue("jamming", "Enable jamming mode", jamming);
   cmd.Parse(argc, argv);
 
   // realtime
-  GlobalValue::Bind("SimulatorImplementationType", StringValue("ns3::RealtimeSimulatorImpl"));
+  if (realtime)
+  {
+    GlobalValue::Bind("SimulatorImplementationType", StringValue("ns3::RealtimeSimulatorImpl"));
+  }
 
   // global
   IoTNet::world = CreateObject<IoTNet>();
@@ -144,8 +153,6 @@ int main(int argc, char *argv[])
   WirelessModuleUtilityHelper utilityHelper;
   std::vector<std::string> AllInclusionList;
   std::vector<std::string> AllExclusionList;
-  AllInclusionList.push_back("ns3::UdpHeader");          // record only UdpHeader
-  AllExclusionList.push_back("ns3::olsr::PacketHeader"); // ignore all olsr headers/trailers
   utilityHelper.SetInclusionList(AllInclusionList);
   utilityHelper.SetExclusionList(AllExclusionList);
   WirelessModuleUtilityContainer utilities = utilityHelper.InstallAll();
@@ -156,36 +163,46 @@ int main(int argc, char *argv[])
   // jammer
   JammerHelper jammerHelper;
   jammerHelper.SetJammerType("ns3::ReactiveJammer");
+  jammerHelper.Set("ReactiveJammerRxTimeout", TimeValue(Seconds(2.0)));
+  jammerHelper.Set("ReactiveJammerReactionStrategy",
+                   UintegerValue(ReactiveJammer::FIXED_PROBABILITY));
   JammerContainer jammers = jammerHelper.Install(c.Get(nodeCount - 1));
   Ptr<Jammer> jammerPtr = jammers.Get(0);
 
   // jamming mitigation
-  JammingMitigationHelper mitigationHelper;
-  mitigationHelper.SetJammingMitigationType("ns3::MitigateByChannelHop");
-  mitigationHelper.Set("MitigateByChannelHopChannelHopDelay",
-                       TimeValue(Seconds(0.0)));
-  mitigationHelper.Set("MitigateByChannelHopDetectionMethod",
-                       UintegerValue(MitigateByChannelHop::PDR_ONLY));
-  JammingMitigationContainer mitigators = mitigationHelper.Install(networkNodes); // normal
-  Ptr<JammingMitigation> mitigationPtr = mitigators.Get(1);                       // node 1
-  Ptr<JammingMitigation> mitigationPtr2 = mitigators.Get(0);                      // node 0
+  // JammingMitigationHelper mitigationHelper;
+  // mitigationHelper.SetJammingMitigationType("ns3::MitigateByChannelHop");
+  // mitigationHelper.Set("MitigateByChannelHopChannelHopDelay",
+  //                      TimeValue(Seconds(0.0)));
+  // mitigationHelper.Set("MitigateByChannelHopDetectionMethod",
+  //                      UintegerValue(MitigateByChannelHop::PDR_ONLY));
+  // JammingMitigationContainer mitigators = mitigationHelper.Install(networkNodes); // normal
+  // Ptr<JammingMitigation> mitigationPtr = mitigators.Get(1);                       // node 1
+  // Ptr<JammingMitigation> mitigationPtr2 = mitigators.Get(0);                      // node 0
 
   // Install
   IoTNet::world->Install();
 
   AnimationInterface anim("output/iotnet-anim.xml");
   anim.EnablePacketMetadata();
-  anim.SetBackgroundImage("/home/haova/Downloads/iotnet-bg.png", 0, 0, 0.05, 0.05, 1);
+  if (!jamming)
+  {
+    anim.SetBackgroundImage("/home/haova/Downloads/iotnet-normal-bg.png", 0, 0, 0.05, 0.05, 1);
+  }
+  else
+  {
+    anim.SetBackgroundImage("/home/haova/Downloads/iotnet-malicious-bg.png", 0, 0, 0.05, 0.05, 1);
+  }
   // IoTNet::world->UpdateAnimationInterface(anim);
 
   // schedule
   Simulator::Schedule(Seconds(2), &ns3::Jammer::StartJammer, jammerPtr); // start jammer at 7s
 
-  // Simulator::Schedule(Seconds(0.1), NodePdr, utilitySend, TimeSimulation);
-  // Simulator::Schedule(Seconds(0.1), NodePdr, utilityReceive, TimeSimulation);
+  // Simulator::Schedule(Seconds(0.1), NodePdr, utilitySend, duration);
+  // Simulator::Schedule(Seconds(0.1), NodePdr, utilityReceive, duration);
 
-  // Simulator::Schedule(Seconds(0.1), NodeRss, utilitySend, TimeSimulation);
-  // Simulator::Schedule(Seconds(0.1), NodeRss, utilityReceive, TimeSimulation);
+  // Simulator::Schedule(Seconds(0.1), NodeRss, utilitySend, duration);
+  // Simulator::Schedule(Seconds(0.1), NodeRss, utilityReceive, duration);
 
   // Simulator::Schedule(Seconds(startTime), &GenerateTraffic, source,
   //                     PpacketSize, networkNodes.Get(0), numPackets,
@@ -193,7 +210,7 @@ int main(int argc, char *argv[])
 
   // simulation
   NS_LOG_UNCOND(">> Start simulation");
-  Simulator::Stop(Seconds(TimeSimulation));
+  Simulator::Stop(Seconds(duration));
   Simulator::Run();
   Simulator::Destroy();
   NS_LOG_UNCOND("<< Stop simulation");
