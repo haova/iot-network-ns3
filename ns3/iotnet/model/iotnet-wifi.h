@@ -17,10 +17,16 @@ namespace ns3
   class IoTNetWifi
   {
   public:
+    static int currentWifiId;
+
     IoTNetWifi(const std::string id, const Ipv4Address network, const Ipv4Mask mask, const Vector position);
     Ptr<IoTNetNode> Create(std::string id, Vector position);
     Ptr<IoTNetNode> GetAp();
     void Install();
+    void GatherInforamtion();
+
+    double DbmToW(double dBm) const;
+    double WToDbm(double w) const;
 
   private:
     std::string m_id;

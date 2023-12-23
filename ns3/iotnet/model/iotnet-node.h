@@ -21,6 +21,8 @@ namespace ns3
     std::string LogPrefix();
     void RemainingEnergy(double oldValue, double remainingEnergy);
     void TotalEnergy(double oldValue, double totalEnergy);
+    void SendPacket(std::string message);
+    void ScheduleSendData();
   };
 }
 #endif /* IOTNET_NODE_H */

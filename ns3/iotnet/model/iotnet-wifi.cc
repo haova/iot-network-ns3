@@ -4,11 +4,15 @@
 
 namespace ns3
 {
+  int IoTNetWifi::currentWifiId = 0;
+
   IoTNetWifi::IoTNetWifi(const std::string id, const Ipv4Address network, const Ipv4Mask mask, const Vector position)
   {
     // config
     std::string phyMode("DsssRate1Mbps");
-    m_ssid = Ssid("ns-3-ssid");
+    std::stringstream ss;
+    ss << "ns-3-ssid-" << ++IoTNetWifi::currentWifiId;
+    m_ssid = Ssid(ss.str());
     m_id = id;
 
     // wifi
@@ -35,6 +39,9 @@ namespace ns3
 
     // create ap
     Create(id, position);
+
+    // schedule access point
+    Simulator::Schedule(Seconds(1), &IoTNetWifi::GatherInforamtion, this);
   }
 
   Ptr<IoTNetNode> IoTNetWifi::GetAp()
@@ -78,6 +85,32 @@ namespace ns3
     // append to vector
     m_allIoTNode.push_back(iotNode);
 
+    // scheldule send data
+    // Simulator::Schedule(Seconds(1), &IoTNetNode::ScheduleSendData, iotNode);
+
     return iotNode;
+  }
+
+  void IoTNetWifi::GatherInforamtion()
+  {
+    NS_LOG_UNCOND("Gather information around");
+    for (size_t i = 1; i < m_allNodes.GetN(); i++) // except ap
+    {
+      Ptr<WirelessModuleUtility> utility = m_allNodes.Get(i)->GetObject<WirelessModuleUtility>();
+      NS_LOG_UNCOND("RSSI of " << m_allIoTNode.at(i)->id << ": " << WToDbm(utility->GetRss()));
+      NS_LOG_UNCOND("PDR of " << m_allIoTNode.at(i)->id << ": " << utility->GetPdr());
+    }
+    Simulator::Schedule(Seconds(10), &IoTNetWifi::GatherInforamtion, this);
+  }
+
+  double IoTNetWifi::DbmToW(double dBm) const
+  {
+    double mW = pow(10.0, dBm / 10.0);
+    return mW / 1000.0;
+  }
+
+  double IoTNetWifi::WToDbm(double w) const
+  {
+    return 10.0 * log10(w * 1000.0);
   }
 }

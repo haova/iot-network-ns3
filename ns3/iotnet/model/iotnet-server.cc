@@ -64,12 +64,19 @@ namespace ns3
     NS_LOG_UNCOND("Next hop ip " << interfaces.GetAddress(1));
 
     uint16_t sinkPort = 8080;
-    Address sinkAddress(InetSocketAddress(interfaces.GetAddress(0), sinkPort));
+    m_sinkAddress = Address(InetSocketAddress(interfaces.GetAddress(0), sinkPort));
 
     // application
     Ptr<Socket> socket = Socket::CreateSocket(m_node.Get(0), TcpSocketFactory::GetTypeId());
     socket->SetAcceptCallback(MakeNullCallback<bool, Ptr<Socket>, const Address &>(), MakeCallback(&IoTNetServer::ConnectionAcceptedCallback, this));
-    socket->Bind(sinkAddress);
+    socket->Bind(m_sinkAddress);
     socket->Listen();
+
+    NS_LOG_UNCOND("Server address " << m_sinkAddress);
+  }
+
+  Address IoTNetServer::GetAddress()
+  {
+    return m_sinkAddress;
   }
 }

@@ -73,7 +73,7 @@ int main(int argc, char *argv[])
 
   // settings
   int nodeCount = 3;         // 2 normal [0, 1], 1 jammer [2]
-  double TimeSimulation = 2; // seconds
+  double TimeSimulation = 3; // seconds
   double interval = 0.1;     // seconds
 
   Time interPacketInterval = Seconds(interval);
@@ -111,6 +111,7 @@ int main(int argc, char *argv[])
   NodeContainer apNodes;
   apNodes.Add(wifiPB.GetAp()->node);
   server.Add(apNodes);
+  IoTNet::world->address = server.GetAddress();
 
   NetDeviceContainer devices, jammerNetdevice;
   devices.Add(s1->device);

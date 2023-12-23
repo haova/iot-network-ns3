@@ -13,6 +13,8 @@ namespace ns3
   {
   public:
     static Ptr<IoTNet> world;
+    Address address;
+
     IoTNet();
     void Add(const std::string name, NodeContainer nodes, Vector position);
     void Add(const std::string name, NodeContainer nodes, Vector position, std::string icon);

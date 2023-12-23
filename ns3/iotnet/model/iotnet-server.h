@@ -15,11 +15,13 @@ namespace ns3
     void Add(const NodeContainer nodes);
     void ConnectionAcceptedCallback(Ptr<Socket> socket, const Address &address);
     void DataReceivedCallback(Ptr<Socket> socket);
+    Address GetAddress();
 
   private:
     NodeContainer m_node;
     Ipv4AddressHelper m_ipv4;
     PointToPointHelper p2p;
+    Address m_sinkAddress;
   };
 }
 
