@@ -26,6 +26,7 @@ namespace ns3
     Ptr<IoTNetNode> GetAp();
     void Install();
     void GatherInformation();
+    void Loop();
     std::time_t Now();
 
     double DbmToW(double dBm) const;

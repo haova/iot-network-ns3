@@ -74,7 +74,7 @@ int main(int argc, char *argv[])
 
   // settings
   int nodeCount = 3;     // 2 normal [0, 1], 1 jammer [2]
-  double duration = 20;  // seconds
+  double duration = 30;  // seconds
   double interval = 0.1; // seconds
 
   bool realtime = false;
@@ -196,7 +196,10 @@ int main(int argc, char *argv[])
   // IoTNet::world->UpdateAnimationInterface(anim);
 
   // schedule
-  Simulator::Schedule(Seconds(2), &ns3::Jammer::StartJammer, jammerPtr); // start jammer at 7s
+  if (jamming)
+  {
+    Simulator::Schedule(Seconds(2), &ns3::Jammer::StartJammer, jammerPtr); // start jammer at 2s
+  }
 
   // Simulator::Schedule(Seconds(0.1), NodePdr, utilitySend, duration);
   // Simulator::Schedule(Seconds(0.1), NodePdr, utilityReceive, duration);

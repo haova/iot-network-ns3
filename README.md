@@ -57,7 +57,7 @@ docker exec -it iotnet-ns3 /bin/bash
 Run IoT Network
 
 ```bash
-./waf --run scratch/iotnet/iotnet
+./waf --run "scratch/iotnet/iotnet --duration=120 --realtime --jamming"
 ```
 
 or

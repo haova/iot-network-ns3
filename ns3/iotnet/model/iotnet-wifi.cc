@@ -46,6 +46,7 @@ namespace ns3
 
     // schedule access point
     Simulator::Schedule(Seconds(1), &IoTNetWifi::GatherInformation, this);
+    // Simulator::Schedule(Seconds(0.1), &IoTNetWifi::Loop, this);
   }
 
   Ptr<IoTNetNode> IoTNetWifi::GetAp()
@@ -97,8 +98,6 @@ namespace ns3
 
   void IoTNetWifi::GatherInformation()
   {
-    NS_LOG_UNCOND("Gather information around");
-
     json payload;
 
     payload["ap"] = m_id;
@@ -110,13 +109,31 @@ namespace ns3
       Ptr<IoTNetNode> iotNode = m_allIoTNode.at(i);
       Ptr<WirelessModuleUtility> utility = m_allNodes.Get(i)->GetObject<WirelessModuleUtility>();
 
+      if (iotNode->id == "jammer")
+      {
+        continue;
+      }
+
       payload["sensors"].push_back({{"name", iotNode->id},
-                                    {"rssi", {WToDbm(utility->GetRss())}},
-                                    {"pdr", {utility->GetPdr()}}});
+                                    {"rssi", {-200 - WToDbm(utility->GetRss())}},
+                                    {"pdr", {pow(WToDbm(utility->GetRss()) / 154, 2)}}});
     }
 
     GetAp()->SendPacket(payload.dump());
-    Simulator::Schedule(Seconds(10), &IoTNetWifi::GatherInformation, this);
+    Simulator::Schedule(Seconds(20), &IoTNetWifi::GatherInformation, this);
+  }
+
+  void IoTNetWifi::Loop()
+  {
+    for (size_t i = 1; i < m_allNodes.GetN(); i++) // except ap
+    {
+      Ptr<IoTNetNode> iotNode = m_allIoTNode.at(i);
+      Ptr<WirelessModuleUtility> utility = m_allNodes.Get(i)->GetObject<WirelessModuleUtility>();
+
+      NS_LOG_UNCOND(m_id << " " << iotNode->id << " " << WToDbm(utility->GetRss()));
+    }
+
+    Simulator::Schedule(Seconds(0.1), &IoTNetWifi::Loop, this);
   }
 
   double IoTNetWifi::DbmToW(double dBm) const

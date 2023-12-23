@@ -17,3 +17,12 @@ services:
       - 3001:3001
     volumes:
       - ./next-app:/root/app
+    links:
+      - ml-server
+  ml-server:
+    container_name: ml-server
+    build: ./mlserver
+    volumes:
+      - ./mlserver:/root/mlserver
+    ports:
+      - 5000:5000

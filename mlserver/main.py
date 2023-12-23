@@ -11,12 +11,12 @@ def predict():
     model = joblib.load("model.pkl")
     for r in readings:
         features = np.array([[r["doc"]["pdr"], r["doc"]["rssi"]]])
-        r["doc"]["isWarning"] = False
+        r["doc"]["isWarning"] = True
         prediction = model.predict(features)
         if prediction != 0:
-            r["doc"]["isWarning"] = True
+            r["doc"]["isWarning"] = False
         
     return jsonify(readings), 200
 
 if __name__ == '__main__':
-   app.run(port=5000)
+   app.run(host='0.0.0.0', port=5000)
