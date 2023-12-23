@@ -17,8 +17,9 @@ namespace ns3
   class IoTNetWifi
   {
   public:
-    IoTNetWifi(const std::string id, const Ipv4Address network, const Ipv4Mask mask);
+    IoTNetWifi(const std::string id, const Ipv4Address network, const Ipv4Mask mask, const Vector position);
     Ptr<IoTNetNode> Create(std::string id, Vector position);
+    Ptr<IoTNetNode> GetAp();
     void Install();
 
   private:
@@ -36,7 +37,7 @@ namespace ns3
 
     Ipv4AddressHelper m_ipv4;
 
-    std::vector<Ptr<IoTNetNode>> m_allPacks;
+    std::vector<Ptr<IoTNetNode>> m_allIoTNode;
   };
 }
 #endif /* IOTNET_WIFI_H */

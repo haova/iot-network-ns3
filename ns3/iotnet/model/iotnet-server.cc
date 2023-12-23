@@ -10,31 +10,66 @@ namespace ns3
   IoTNetServer::IoTNetServer(const std::string id, const Ipv4Address network, const Ipv4Mask mask, Vector position)
   {
     // create node
-    NodeContainer node;
-    node.Create(1);
+    m_node.Create(1);
 
     // csma
-    m_csma.SetChannelAttribute("DataRate", StringValue("100Mbps"));
-    m_csma.SetChannelAttribute("Delay", TimeValue(NanoSeconds(6560)));
+    p2p.SetDeviceAttribute("DataRate", StringValue("5Mbps"));
+    p2p.SetChannelAttribute("Delay", StringValue("2ms"));
 
     // ipv4
     m_ipv4.SetBase(network, mask);
 
     // internet
-    IoTNet::world->Add(id, node, position);
-
-    // create device
-    NetDeviceContainer device = m_csma.Install(node);
-    Ipv4InterfaceContainer interface = m_ipv4.Assign(device);
-
-    NS_LOG_UNCOND("Server ip " << interface.GetAddress(0));
+    IoTNet::world->Add(id, m_node, position);
   }
 
-  void IoTNetServer::Add(NodeContainer nodes)
+  void
+  IoTNetServer::DataReceivedCallback(Ptr<Socket> socket)
   {
-    NetDeviceContainer devices = m_csma.Install(nodes);
+    Ptr<Packet> packet;
+    while ((packet = socket->Recv()))
+    {
+      packet->PrintPacketTags(std::cout);
+
+      // Process the received data
+      uint8_t buffer[packet->GetSize()];
+      packet->CopyData(buffer, packet->GetSize());
+
+      // Assuming the payload is a string, you can convert it to a C++ string
+      std::string payload(reinterpret_cast<char *>(buffer), packet->GetSize());
+
+      std::cout << "Received " << packet->GetSize() << " bytes. Payload: " << payload << std::endl;
+
+      // forward to external server
+      // cpr::Response r = cpr::Post(
+      //     cpr::Url{"server-node:3000/api/reading"},
+      //     cpr::Header{{"accept", "application/json"}},
+      //     cpr::Header{{"content-type", "application/json"}},
+      //     cpr::Body{{payload}});
+    }
+  }
+
+  void IoTNetServer::ConnectionAcceptedCallback(Ptr<Socket> socket, const Address &address)
+  {
+    std::cout << "Received connection from " << address << std::endl;
+    socket->SetRecvCallback(MakeCallback(&IoTNetServer::DataReceivedCallback, this));
+  }
+
+  void IoTNetServer::Add(NodeContainer node)
+  {
+    NetDeviceContainer devices = p2p.Install(NodeContainer(m_node, node));
     Ipv4InterfaceContainer interfaces = m_ipv4.Assign(devices);
 
     NS_LOG_UNCOND("Ap ip " << interfaces.GetAddress(0));
+    NS_LOG_UNCOND("Next hop ip " << interfaces.GetAddress(1));
+
+    uint16_t sinkPort = 8080;
+    Address sinkAddress(InetSocketAddress(interfaces.GetAddress(0), sinkPort));
+
+    // application
+    Ptr<Socket> socket = Socket::CreateSocket(m_node.Get(0), TcpSocketFactory::GetTypeId());
+    socket->SetAcceptCallback(MakeNullCallback<bool, Ptr<Socket>, const Address &>(), MakeCallback(&IoTNetServer::ConnectionAcceptedCallback, this));
+    socket->Bind(sinkAddress);
+    socket->Listen();
   }
 }

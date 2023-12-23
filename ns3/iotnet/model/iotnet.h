@@ -15,6 +15,7 @@ namespace ns3
     static Ptr<IoTNet> world;
     IoTNet();
     void Add(const std::string name, NodeContainer nodes, Vector position);
+    void Add(const std::string name, NodeContainer nodes, Vector position, std::string icon);
     void Install();
     void UpdateAnimationInterface(AnimationInterface anim);
 
@@ -24,6 +25,7 @@ namespace ns3
     Ptr<ListPositionAllocator> m_positionAlloc;
     NodeContainer m_allNodes;
     std::vector<std::string> m_allNames;
+    std::vector<std::string> m_allIcons;
   };
 }
 

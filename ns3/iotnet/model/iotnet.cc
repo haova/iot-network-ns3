@@ -12,6 +12,11 @@ namespace ns3
 
   void IoTNet::Add(const std::string name, NodeContainer nodes, Vector position)
   {
+    Add(name, nodes, position, "");
+  }
+
+  void IoTNet::Add(const std::string name, NodeContainer nodes, Vector position, std::string icon)
+  {
     m_internet.Install(nodes);
 
     for (size_t i = 0; i < nodes.GetN(); i++)
@@ -20,6 +25,7 @@ namespace ns3
       m_allNodes.Add(n0);
       m_positionAlloc->Add(position);
       m_allNames.push_back(name);
+      m_allIcons.push_back(icon);
     }
   }
 
@@ -36,7 +42,12 @@ namespace ns3
   {
     for (size_t i = 0; i < m_allNodes.GetN(); i++)
     {
-      anim.UpdateNodeDescription(m_allNodes.Get(i), m_allNames.at(i));
+      Ptr<Node> n0 = m_allNodes.Get(i);
+      if (!m_allIcons[i].compare(""))
+      {
+        uint32_t icon = anim.AddResource(m_allIcons[i]);
+        anim.UpdateNodeImage(n0->GetId(), icon);
+      } // anim.UpdateNodeDescription(m_allNodes.Get(i), m_allNames.at(i));
     }
   }
 }

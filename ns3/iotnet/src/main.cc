@@ -90,13 +90,15 @@ int main(int argc, char *argv[])
   IoTNet::world = CreateObject<IoTNet>();
 
   // server
-  IoTNetServer server("server", "10.1.1.0", "255.255.255.0", Vector(0.0, 0.0, 0.0));
+  IoTNetServer server("server", "10.1.1.0", "255.255.255.0", Vector(50.0, 5.0, 0.0));
 
   // wifi network
-  IoTNetWifi wifiA("wifi-a", "10.1.2.0", "255.255.255.0");
-  Ptr<IoTNetNode> s1 = wifiA.Create("sensor-1", Vector(10.0, 10.0, 0.0));
-  Ptr<IoTNetNode> s2 = wifiA.Create("sensor-2", Vector(20.0, 15.0, 0.0));
-  Ptr<IoTNetNode> j = wifiA.Create("jammer", Vector(35.0, 32.0, 0.0));
+  IoTNetWifi wifiPB("wifi-phong-bep", "10.1.2.0", "255.255.255.0", Vector(50.0, 30.0, 0.0));
+  Ptr<IoTNetNode> s1 = wifiPB.Create("may-nuoc-nong", Vector(55.0, 25.0, 0.0));
+  Ptr<IoTNetNode> s2 = wifiPB.Create("bep", Vector(45.0, 35.0, 0.0));
+  Ptr<IoTNetNode> s3 = wifiPB.Create("may-giat", Vector(45.0, 55.0, 0.0));
+  Ptr<IoTNetNode> s4 = wifiPB.Create("tu-lanh", Vector(55.0, 55.0, 0.0));
+  Ptr<IoTNetNode> j = wifiPB.Create("jammer", Vector(50.0, 50.0, 0.0));
 
   // old integrate
   NodeContainer c, networkNodes;
@@ -105,6 +107,10 @@ int main(int argc, char *argv[])
   c.Add(j->node);
   networkNodes.Add(s1->node);
   networkNodes.Add(s2->node);
+
+  NodeContainer apNodes;
+  apNodes.Add(wifiPB.GetAp()->node);
+  server.Add(apNodes);
 
   NetDeviceContainer devices, jammerNetdevice;
   devices.Add(s1->device);
@@ -146,6 +152,7 @@ int main(int argc, char *argv[])
 
   AnimationInterface anim("output/iotnet-anim.xml");
   anim.EnablePacketMetadata();
+  anim.SetBackgroundImage("/home/haova/Downloads/iotnet-bg.png", 0, 0, 0.05, 0.05, 1);
   // IoTNet::world->UpdateAnimationInterface(anim);
 
   // schedule

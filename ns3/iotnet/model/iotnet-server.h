@@ -4,7 +4,7 @@
 
 #include "ns3/core-module.h"
 #include "ns3/node-container.h"
-#include "ns3/csma-module.h"
+#include "ns3/point-to-point-module.h"
 
 namespace ns3
 {
@@ -13,10 +13,13 @@ namespace ns3
   public:
     IoTNetServer(const std::string id, const Ipv4Address network, const Ipv4Mask mask, Vector position);
     void Add(const NodeContainer nodes);
+    void ConnectionAcceptedCallback(Ptr<Socket> socket, const Address &address);
+    void DataReceivedCallback(Ptr<Socket> socket);
 
   private:
+    NodeContainer m_node;
     Ipv4AddressHelper m_ipv4;
-    CsmaHelper m_csma;
+    PointToPointHelper p2p;
   };
 }
 

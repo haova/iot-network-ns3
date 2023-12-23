@@ -4,10 +4,10 @@
 
 namespace ns3
 {
-  IoTNetWifi::IoTNetWifi(const std::string id, const Ipv4Address network, const Ipv4Mask mask)
+  IoTNetWifi::IoTNetWifi(const std::string id, const Ipv4Address network, const Ipv4Mask mask, const Vector position)
   {
     // config
-    std::string phyMode("OfdmRate6Mbps");
+    std::string phyMode("DsssRate1Mbps");
     m_ssid = Ssid("ns-3-ssid");
     m_id = id;
 
@@ -24,7 +24,7 @@ namespace ns3
 
     // mac layer
     m_wifiMac = WifiMacHelper();
-    m_wifi.SetRemoteStationManager("ns3::ConstantRateWifiManager", "DataMode", StringValue(phyMode) /*, "ControlMode", StringValue(phyMode)*/);
+    m_wifi.SetRemoteStationManager("ns3::ConstantRateWifiManager", "DataMode", StringValue(phyMode), "ControlMode", StringValue(phyMode));
 
     // energy
     m_basicSourceHelper.Set("BasicEnergySourceInitialEnergyJ", DoubleValue(25.0));
@@ -32,19 +32,27 @@ namespace ns3
 
     // ip
     m_ipv4.SetBase(network, mask);
+
+    // create ap
+    Create(id, position);
+  }
+
+  Ptr<IoTNetNode> IoTNetWifi::GetAp()
+  {
+    return m_allIoTNode.at(0);
   }
 
   Ptr<IoTNetNode> IoTNetWifi::Create(std::string id, Vector position)
   {
     u_int32_t currentIndex = m_allNodes.GetN();
 
-    Ptr<IoTNetNode> pack = CreateObject<IoTNetNode>();
-    pack->id = id;
-    pack->position = position;
+    Ptr<IoTNetNode> iotNode = CreateObject<IoTNetNode>();
+    iotNode->id = id;
+    iotNode->position = position;
 
     // create node
-    pack->node.Create(1);
-    m_allNodes.Add(pack->node);
+    iotNode->node.Create(1);
+    m_allNodes.Add(iotNode->node);
 
     // device = phy + mac + node
     if (currentIndex == 0) // node 0 always ap
@@ -55,21 +63,21 @@ namespace ns3
     {
       m_wifiMac.SetType("ns3::StaWifiMac", "Ssid", SsidValue(m_ssid), "ActiveProbing", BooleanValue(false));
     }
-    pack->device = m_wifi.Install(m_wifiPhy, m_wifiMac, pack->node);
+    iotNode->device = m_wifi.Install(m_wifiPhy, m_wifiMac, iotNode->node);
 
     // energy
-    EnergySourceContainer energySource = m_basicSourceHelper.Install(pack->node);
-    DeviceEnergyModelContainer deviceEnergyModel = m_radioEnergyHelper.Install(pack->device, energySource);
+    EnergySourceContainer energySource = m_basicSourceHelper.Install(iotNode->node);
+    DeviceEnergyModelContainer deviceEnergyModel = m_radioEnergyHelper.Install(iotNode->device, energySource);
 
     // add to world
-    IoTNet::world->Add(id, pack->node, position);
+    IoTNet::world->Add(id, iotNode->node, position);
 
     // ip
-    pack->interface = m_ipv4.Assign(pack->device);
+    iotNode->interface = m_ipv4.Assign(iotNode->device);
 
     // append to vector
-    m_allPacks.push_back(pack);
+    m_allIoTNode.push_back(iotNode);
 
-    return pack;
+    return iotNode;
   }
 }
