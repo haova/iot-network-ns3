@@ -7,4 +7,4 @@ WORKDIR /root/mlserver
 RUN pip install flask joblib numpy
 RUN pip install -U scikit-learn
 
-ENTRYPOINT ["tail", "-f", "/dev/null"]
+ENTRYPOINT ["python", "main.py"]

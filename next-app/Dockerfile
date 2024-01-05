@@ -2,5 +2,6 @@ FROM node:20
 
 WORKDIR /root/app
 COPY . .
+RUN npm i
 
-ENTRYPOINT ["tail", "-f", "/dev/null"]
+ENTRYPOINT ["npm", "run", "dev"]

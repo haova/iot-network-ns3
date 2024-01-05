@@ -130,4 +130,6 @@ RUN cp /root/cpr-1.8.4/build/lib/* build/lib/
 RUN ./waf configure
 RUN ./waf build 
 
-ENTRYPOINT ["tail", "-f", "/dev/null"]
+ADD run.sh .
+
+ENTRYPOINT ["./run.sh"]
